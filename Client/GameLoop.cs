@@ -30,7 +30,6 @@ namespace MiyakoCarryService.Client
     {
         public Dictionary<Type, IMgr> Mgrs { get; private set; } = new();
         public Dictionary<string, TraderOffer> ItemBestPriceDict { get; private set; } = new();
-        public Shader HighlightShader { get; private set; } = null;
         public Camera MainCamera { get; private set; } = null;
         public Camera OpticCamera { get; private set; } = null;
         public bool IsGameStarted = false;
@@ -84,56 +83,14 @@ namespace MiyakoCarryService.Client
             }
         }
 
-        public void LoadAssetBundle()
-        {
-            if (HighlightShader != null)
-            {
-                return;
-            }
-
-            var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = "MiyakoCarryService.Client.Assets.miyakocarryservice";
-            var highlightShaderName = "assets/shader/teammatehighlight.shader";
-
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                if (stream == null)
-                {
-                    return;
-                }
-
-                byte[] assetBytes;
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    stream.CopyTo(memoryStream);
-                    assetBytes = memoryStream.ToArray();
-                }
-
-                var bundle = AssetBundle.LoadFromMemory(assetBytes);
-                if (bundle != null)
-                {
-                    HighlightShader = bundle.LoadAsset<Shader>(highlightShaderName);
-                    if (HighlightShader == null)
-                    {
-                        UnityEngine.Debug.LogException(new Exception($"无法加载Shader: {highlightShaderName}"));
-                    }
-
-                    bundle.Unload(false);
-                    return;
-                }
-            }
-        }
 
         public void Init()
         {
-            LoadAssetBundle();
-
             BaseMgr.Enable(typeof(McsMgr));
             BaseMgr.Enable(typeof(PlayerDataMgr));
             BaseMgr.Enable(typeof(LootDataMgr));
             BaseMgr.Enable(typeof(SubtitlesMgr));
             BaseMgr.Enable(typeof(CommandMgr));
-            BaseMgr.Enable(typeof(HighlightMgr));
             BaseMgr.Enable(typeof(ExfilDataMgr));
             BaseMgr.Enable(typeof(TransitDataMgr));
             BaseMgr.Enable(typeof(QuestDataMgr));
@@ -280,7 +237,6 @@ namespace MiyakoCarryService.Client
                 _loadedMcsLeadPlayer.Clear();
                 _loadedMcsLeadPlayer = null;
             }
-            HighlightShader = null;
             if (Mgrs != null)
             {
                 // BrainMgr 先进行，否则当McsMgr释放后无法获取到McsBotPlayers

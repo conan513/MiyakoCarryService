@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using MiyakoCarryService.Fika.Packets;
 using MiyakoCarryService.Client.Mgrs;
 using Fika.Core.Modding.Events;
@@ -17,6 +17,7 @@ using MiyakoCarryService.Client.Patches.Events;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using MiyakoCarryService.Client.Api;
+using MiyakoCarryService.Fika.Components;
 using BepInEx;
 using System.Linq;
 
@@ -59,6 +60,7 @@ namespace MiyakoCarryService.Fika
             McsEventApi.Subscribe<QuestProxyCommandCallbackHandleFikaEvent>(SendQuestProxyCommandCallbackPacket, this);
             McsEventApi.Subscribe<CommandMgrHandleFikaEvent>(SendCommandPacket, this);
             McsEventApi.Subscribe<ConfigEntrySettingChangedEvent>(SendMcsBotPlayerConfigPacket, this);
+            McsEventApi.Subscribe<McsBotPlayerActivatedEvent>(OnMcsBotPlayerActivated, this);
         }
 
         public void OnDestroy()
@@ -72,6 +74,37 @@ namespace MiyakoCarryService.Fika
             McsEventApi.Unsubscribe<CommandMgrHandleFikaEvent>(SendCommandPacket);
             McsEventApi.Unsubscribe<ConfigEntrySettingChangedEvent>(SendMcsBotPlayerConfigPacket);
             McsEventApi.Unsubscribe<QuestProxyCommandCallbackHandleFikaEvent>(SendQuestProxyCommandCallbackPacket);
+            McsEventApi.Unsubscribe<McsBotPlayerActivatedEvent>(OnMcsBotPlayerActivated);
+        }
+
+        private void OnMcsBotPlayerActivated(McsBotPlayerActivatedEvent @event)
+        {
+            var botPlayer = McsMgr.TryGetMcsBotPlayer(@event.McsBotPlayerId);
+            if (botPlayer != null)
+            {
+                McsFikaHealthBar.Create(botPlayer);
+            }
+        }
+
+        void LateUpdate()
+        {
+            if (Singleton<GameWorld>.Instance?.MainPlayer == null)
+            {
+                return;
+            }
+
+            var myPlayerId = Singleton<GameWorld>.Instance.MainPlayer.ProfileId;
+            var squadMembers = McsMgr?.GetAllMcsSquadMembersByMcsLeadId(myPlayerId);
+            if (squadMembers != null)
+            {
+                foreach (var member in squadMembers)
+                {
+                    if (member != null && member.HealthController?.IsAlive == true)
+                    {
+                        McsFikaHealthBar.Create(member);
+                    }
+                }
+            }
         }
 
         public void OnFikaNetworkCreated(FikaNetworkManagerCreatedEvent fikaEvent)

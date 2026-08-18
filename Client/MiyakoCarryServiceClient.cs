@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using UnityEngine;
@@ -84,9 +84,6 @@ namespace MiyakoCarryService.Client
 
         #region PLAYER
 
-        public static ConfigEntry<bool> TeammateHighlight;
-        public static ConfigEntry<KeyboardShortcut> TeammateHighlightHotKey;
-        public static ConfigEntry<Color> TeammateHighlightColor;
         public static ConfigEntry<bool> EnableSubtitles;
         public static ConfigEntry<bool> ShowBrevityCode;
 
@@ -529,24 +526,6 @@ namespace MiyakoCarryService.Client
 
             #endregion
             #region PLAYER
-
-            TeammateHighlight = Register(
-                EConfigType.PLAYER,
-                Locales.TEAMMATEHIGHLIGHT_KEY,
-                false
-            );
-
-            TeammateHighlightHotKey = Register(
-                EConfigType.PLAYER,
-                Locales.TEAMMATEHIGHLIGHTHOTKEY_KEY,
-                new KeyboardShortcut()
-            );
-
-            TeammateHighlightColor = Register(
-                EConfigType.PLAYER,
-                Locales.TEAMMATEHIGHLIGHTCOLOR_KEY,
-                Draw.TranslucentTianyi.Rgb
-            );
 
             EnableSubtitles = Register(
                 EConfigType.PLAYER,

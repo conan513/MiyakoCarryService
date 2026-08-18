@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>14.0</LangVersion>
@@ -46,6 +46,8 @@
     <Reference Include="UnityEngine.PhysicsModule" HintPath="..\Ref\UnityEngine.PhysicsModule.dll" Private="false" />
     <Reference Include="UnityEngine.InputLegacyModule" HintPath="..\Ref\UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="UnityEngine.TextRenderingModule" HintPath="..\Ref\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="DOTween" HintPath="..\Ref\DOTween.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="..\Ref\UnityEngine.UIModule.dll" Private="false" />
     <Reference Include="UnityEngine.UI" HintPath="..\Ref\UnityEngine.UI.dll" Private="false" />
     <Reference Include="Fika.Core" HintPath="..\Ref\Fika.Core-2.4.0.dll" Private="false" />
   </ItemGroup>
