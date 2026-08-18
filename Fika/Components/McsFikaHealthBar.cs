@@ -104,45 +104,60 @@ namespace MiyakoCarryService.Fika.Components
 
         private void Update()
         {
-            if (_mainPlayer == null)
+            try
             {
-                _mainPlayer = Singleton<GameWorld>.Instance?.MainPlayer as FikaPlayer;
+                if (_currentPlayer == null || _currentPlayer.HealthController == null || !_currentPlayer.HealthController.IsAlive)
+                {
+                    if (_playerPlate != null && _playerPlate.gameObject.activeSelf)
+                    {
+                        _playerPlate.gameObject.SetActive(false);
+                    }
+                    return;
+                }
+
                 if (_mainPlayer == null)
                 {
-                    return;
+                    _mainPlayer = Singleton<GameWorld>.Instance?.MainPlayer as FikaPlayer;
+                    if (_mainPlayer == null)
+                    {
+                        return;
+                    }
                 }
-            }
 
-            if (_camera == null)
-            {
-                _camera = CameraManager.Instance?.Camera;
                 if (_camera == null)
                 {
+                    _camera = CameraManager.Instance?.Camera;
+                    if (_camera == null)
+                    {
+                        return;
+                    }
+                }
+
+                if (_neckBone == null && _currentPlayer.PlayerBones != null)
+                {
+                    _neckBone = _currentPlayer.PlayerBones.Neck;
+                }
+
+                if (_playerPlate == null || _alphaGroup == null || _plateRectTransform == null)
+                {
                     return;
                 }
-            }
 
-            if (_neckBone == null && _currentPlayer?.PlayerBones != null)
-            {
-                _neckBone = _currentPlayer.PlayerBones.Neck;
-            }
+                var deltaTime = Time.deltaTime;
+                UpdateScreenSpacePosition();
 
-            if (_playerPlate == null || _alphaGroup == null || _plateRectTransform == null)
-            {
-                return;
-            }
-
-            var deltaTime = Time.deltaTime;
-            UpdateScreenSpacePosition();
-
-            if (FikaPlugin.Instance?.Settings?.UseOcclusion?.Value == true)
-            {
-                _counter += deltaTime;
-                if (_counter > 1f)
+                if (FikaPlugin.Instance?.Settings?.UseOcclusion?.Value == true)
                 {
-                    _counter = 0f;
-                    CheckForOcclusion();
+                    _counter += deltaTime;
+                    if (_counter > 1f)
+                    {
+                        _counter = 0f;
+                        CheckForOcclusion();
+                    }
                 }
+            }
+            catch
+            {
             }
         }
 
@@ -509,26 +524,31 @@ namespace MiyakoCarryService.Fika.Components
 
         private void OnDestroy()
         {
-            if (FikaPlugin.Instance?.Settings != null)
+            try
             {
-                FikaPlugin.Instance.Settings.UsePlateFactionSide.SettingChanged -= UsePlateFactionSide_SettingChanged;
-                FikaPlugin.Instance.Settings.HideHealthBar.SettingChanged -= HideHealthBar_SettingChanged;
-                FikaPlugin.Instance.Settings.UseNamePlates.SettingChanged -= UseNamePlates_SettingChanged;
-                FikaPlugin.Instance.Settings.UseHealthNumber.SettingChanged -= UseHealthNumber_SettingChanged;
+                if (FikaPlugin.Instance?.Settings != null)
+                {
+                    FikaPlugin.Instance.Settings.UsePlateFactionSide.SettingChanged -= UsePlateFactionSide_SettingChanged;
+                    FikaPlugin.Instance.Settings.HideHealthBar.SettingChanged -= HideHealthBar_SettingChanged;
+                    FikaPlugin.Instance.Settings.UseNamePlates.SettingChanged -= UseNamePlates_SettingChanged;
+                    FikaPlugin.Instance.Settings.UseHealthNumber.SettingChanged -= UseHealthNumber_SettingChanged;
+                }
+
+                if (_currentPlayer?.HealthController != null)
+                {
+                    _currentPlayer.HealthController.HealthChangedEvent -= HealthController_HealthChangedEvent;
+                    _currentPlayer.HealthController.BodyPartDestroyedEvent -= HealthController_BodyPartDestroyedEvent;
+                    _currentPlayer.HealthController.BodyPartRestoredEvent -= HealthController_BodyPartRestoredEvent;
+                    _currentPlayer.HealthController.DiedEvent -= HealthController_DiedEvent;
+                }
+
+                if (_playerPlate != null)
+                {
+                    _playerPlate.gameObject.SetActive(false);
+                }
             }
-
-            if (_currentPlayer?.HealthController != null)
+            catch
             {
-                _currentPlayer.HealthController.HealthChangedEvent -= HealthController_HealthChangedEvent;
-                _currentPlayer.HealthController.BodyPartDestroyedEvent -= HealthController_BodyPartDestroyedEvent;
-                _currentPlayer.HealthController.BodyPartRestoredEvent -= HealthController_BodyPartRestoredEvent;
-                _currentPlayer.HealthController.DiedEvent -= HealthController_DiedEvent;
-
-            }
-
-            if (_playerPlate != null)
-            {
-                Destroy(_playerPlate.gameObject);
             }
         }
     }

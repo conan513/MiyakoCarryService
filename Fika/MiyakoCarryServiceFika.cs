@@ -86,27 +86,6 @@ namespace MiyakoCarryService.Fika
             }
         }
 
-        void LateUpdate()
-        {
-            if (Singleton<GameWorld>.Instance?.MainPlayer == null)
-            {
-                return;
-            }
-
-            var myPlayerId = Singleton<GameWorld>.Instance.MainPlayer.ProfileId;
-            var squadMembers = McsMgr?.GetAllMcsSquadMembersByMcsLeadId(myPlayerId);
-            if (squadMembers != null)
-            {
-                foreach (var member in squadMembers)
-                {
-                    if (member != null && member.HealthController?.IsAlive == true)
-                    {
-                        McsFikaHealthBar.Create(member);
-                    }
-                }
-            }
-        }
-
         public void OnFikaNetworkCreated(FikaNetworkManagerCreatedEvent fikaEvent)
         {
             fikaEvent.Manager.RegisterPacket<CommandPacket>(OnCommandPacketReceived);
