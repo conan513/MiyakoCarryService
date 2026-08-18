@@ -91,10 +91,9 @@ namespace MiyakoCarryService.Server.Services
 
             try
             {
-                _leadMemberGroups.TryGetValue(mcsLeadPlayerId, out var mcsAids);
-                if (mcsAids == null)
+                if (!_leadMemberGroups.TryGetValue(mcsLeadPlayerId, out var mcsAids) || mcsAids == null)
                 {
-                    yield return new();
+                    yield break;
                 }
 
                 foreach (var mcsAid in mcsAids)

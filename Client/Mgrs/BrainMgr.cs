@@ -121,21 +121,33 @@ namespace MiyakoCarryService.Client.Mgrs
         {
             base.OnMgrDestroy();
 
-            var mcsBotPlayers = McsMgr.GetAllMcsBotPlayer();
-            foreach (var mcsBotPlayer in mcsBotPlayers)
+            try
             {
-                if (mcsBotPlayer == null)
+                var mcsBotPlayers = McsMgr.GetAllMcsBotPlayer();
+                if (mcsBotPlayers != null)
                 {
-                    continue;
-                }
+                    foreach (var mcsBotPlayer in mcsBotPlayers)
+                    {
+                        if (mcsBotPlayer == null || mcsBotPlayer.AIData == null || mcsBotPlayer.AIData.BotOwner == null)
+                        {
+                            continue;
+                        }
 
-                LayerUtils.McsRestoreLayers(mcsBotPlayer.AIData.BotOwner, Classification.RemoveLayerNames);
+                        LayerUtils.McsRestoreLayers(mcsBotPlayer.AIData.BotOwner, Classification.RemoveLayerNames);
 
-                var customLayerMaps = LayerUtils.GetCustomLayerMaps();
-                foreach ((var customLayerType, var priority) in customLayerMaps)
-                {
-                    LayerUtils.McsRemoveLayer(mcsBotPlayer.AIData.BotOwner, customLayerType.Name);
+                        var customLayerMaps = LayerUtils.GetCustomLayerMaps();
+                        if (customLayerMaps != null)
+                        {
+                            foreach ((var customLayerType, var priority) in customLayerMaps)
+                            {
+                                LayerUtils.McsRemoveLayer(mcsBotPlayer.AIData.BotOwner, customLayerType.Name);
+                            }
+                        }
+                    }
                 }
+            }
+            catch
+            {
             }
         }
 
