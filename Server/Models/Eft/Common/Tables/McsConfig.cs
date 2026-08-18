@@ -19,6 +19,9 @@ namespace MiyakoCarryService.Server.Models.Eft.Common.Tables
         [JsonPropertyName("CheckIfdian")]
         public bool CheckIfdian { get; set; } = true;
 
+        [JsonPropertyName("AutoGenerateBotCount")]
+        public int AutoGenerateBotCount { get; set; } = 100;
+
         [JsonPropertyName("TicketPricePerPercent")]
         public int TicketPricePerPercent 
         { 
