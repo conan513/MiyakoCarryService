@@ -40,6 +40,7 @@ namespace MiyakoCarryService.Server.Patches.Friend
         [PatchPostfix]
         public static void Postfix(MongoId sessionId, ref GetFriendListDataResponse __result)
         {
+            _profileController.CheckAndUpdateBotsForPlayerLevel(sessionId);
             __result.Friends.Add(_miyakoChatBot.GetChatBot());
             var mcsBotPlayerProfiles = _profileController.GetAllMcsBotPlayerProfileByBossId(sessionId);
 

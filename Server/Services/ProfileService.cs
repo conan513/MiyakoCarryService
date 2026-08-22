@@ -85,6 +85,7 @@ namespace MiyakoCarryService.Server.Services
         private List<string> _ifdianNames = [];
         private Ifdian _ifdian;
         private SemaphoreSlim _saveLock = new(1, 1);
+        private readonly ConcurrentDictionary<MongoId, int> _playerLastBotLevel = new();
 
         public bool RemoveMcsBotPlayerProfile(MongoId mcsLeadPlayerId, MongoId mcsBotPlayerId)
         {
@@ -537,14 +538,29 @@ namespace MiyakoCarryService.Server.Services
             var role = isPmc
                 ? (orderInfo.SpawnType.WildSpawnType is "pmcUSEC" or "pmcBEAR" ? orderInfo.SpawnType.WildSpawnType : (side == "Usec" ? "pmcUSEC" : "pmcBEAR"))
                 : orderInfo.SpawnType.WildSpawnType;
-            var level = GetRandomLevelByCarryServiceLevel(orderInfo.CarryServiceLevel + (orderInfo.SpawnType.IsBoss ? 1 : 0));
+
+            var playerLevel = Math.Max(1, completeQuestPmcData?.Info?.Level ?? 1);
+            var playerPrestige = completeQuestPmcData?.Info?.PrestigeLevel ?? 0;
+
+            int targetBotLevel;
+            int levelVariance = randomUtil.RandInt(-10, 11); // ±10 random faktor
+            if (compatibilityService.HasAPBS)
+            {
+                compatibilityService.SetupApbsContext(mcsLeadPlayerId.ToString(), playerLevel, playerPrestige, "bigmap");
+                targetBotLevel = Math.Clamp(playerLevel + levelVariance, 1, 79);
+            }
+            else
+            {
+                targetBotLevel = Math.Clamp(playerLevel + levelVariance, 1, 79);
+            }
+
             var botGenerationDetails = new BotGenerationDetails()
             {
                 IsPmc = isPmc,
                 Side = side,
                 Role = role,
-                BotLevel = level,
-                PlayerLevel = level,
+                BotLevel = targetBotLevel,
+                PlayerLevel = playerLevel,
                 BotRelativeLevelDeltaMin = 0,
                 BotRelativeLevelDeltaMax = 0,
                 BotCountToGenerate = 1,
@@ -578,7 +594,6 @@ namespace MiyakoCarryService.Server.Services
                 botGenerationDetails.Role = completeQuestPmcData.Info.Side == "Usec" ? "pmcUSEC" : "pmcBEAR";
                 pmcData = GeneratePmcData(mcsLeadPlayerId, mcsBotPlayerId, botGenerationDetails, orderInfo);
             }
-            pmcData.Info.Level = botGenerationDetails.PlayerLevel;
 
             PmcData scavData;
             try
@@ -636,20 +651,42 @@ namespace MiyakoCarryService.Server.Services
         {
             var botBase = compatibilityService.HasAPBS ? botGenerator.PrepareAndGenerateBot(mcsLeadPlayerId, botGenerationDetails) : mcsBotGenerator.CustomPrepareAndGenerateBot(mcsLeadPlayerId, botGenerationDetails, orderInfo);
 
-            if (string.IsNullOrEmpty(botBase.Info.Nickname))
+            var existingProfile = GetMcsBotPlayerProfile(mcsLeadPlayerId, mcsBotPlayerId);
+            if (existingProfile?.CharacterData?.PmcData is not null)
             {
-                var playerName = _ifdianNames is not null && _ifdianNames.Count > 0 ? randomUtil.GetArrayValue(_ifdianNames) : null;
-                if (playerName is not null)
+                botBase.Info.Nickname = existingProfile.CharacterData.PmcData.Info.Nickname;
+                botBase.Info.LowerNickname = (botBase.Info.Nickname ?? string.Empty).ToLowerInvariant();
+                botBase.Aid = existingProfile.CharacterData.PmcData.Aid;
+                if (existingProfile.CharacterData.PmcData.Customization != null)
                 {
-                    botBase.Info.Nickname = playerName;
-                    botBase.Info.LowerNickname = playerName.ToLower();
+                    botBase.Customization = existingProfile.CharacterData.PmcData.Customization;
+                }
+            }
+            else
+            {
+                botBase.Aid = hashUtil.GenerateAccountId();
+                if (string.IsNullOrEmpty(botBase.Info.Nickname))
+                {
+                    var playerName = _ifdianNames is not null && _ifdianNames.Count > 0 ? randomUtil.GetArrayValue(_ifdianNames) : null;
+                    if (playerName is not null)
+                    {
+                        botBase.Info.Nickname = playerName;
+                        botBase.Info.LowerNickname = playerName.ToLowerInvariant();
+                    }
                 }
             }
 
-            botBase.Info.Level = botGenerationDetails.PlayerLevel;
+            if (botBase.Info.Level == null || botBase.Info.Level <= 0)
+            {
+                botBase.Info.Level = botGenerationDetails.PlayerLevel;
+            }
+
+            var expTable = globalTable.Configuration.Exp.Level.ExperienceTable;
+            var expLevel = Math.Clamp(botBase.Info.Level.Value, 1, expTable.Length);
+            botBase.Info.Experience = expTable.Take(expLevel).Sum(entry => entry.Experience);
+
             botBase.Id = mcsBotPlayerId;
             botBase.SessionId = mcsBotPlayerId;
-            botBase.Aid = hashUtil.GenerateAccountId();
 
             var tradersInfo = new Dictionary<MongoId, TraderInfo>();
 
@@ -736,9 +773,6 @@ namespace MiyakoCarryService.Server.Services
                 TotalLimit = 1000000,
                 ResetInterval = 86400,
             };
-
-            var expTable = globalTable.Configuration.Exp.Level.ExperienceTable;
-            botBase.Info.Experience = expTable.Take(botGenerationDetails.PlayerLevel.Value).Sum(entry => entry.Experience);
 
             var pmcData = new PmcData
             {
@@ -1079,42 +1113,6 @@ namespace MiyakoCarryService.Server.Services
                 return;
             }
 
-            var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
-
-            // 1. Ensure all existing bots have valid, active, non-expired orders
-            foreach (var profile in existingProfiles)
-            {
-                var botPlayerId = profile.ProfileInfo.ProfileId.Value;
-                var existingOrder = infoService.GetOrderInfoByBotPlayerProfileId(botPlayerId);
-                if (existingOrder == null)
-                {
-                    var newOrder = new OrderInfo
-                    {
-                        McsLeadPlayerId = mcsLeadPlayerId,
-                        QuestId = new MongoId(),
-                        PlayerIds = new HashSet<MongoId> { botPlayerId },
-                        SpawnType = new SpawnType { WildSpawnType = profile.CharacterData.PmcData.Info.Settings.Role, IsBoss = false, DisplayName = profile.CharacterData.PmcData.Info.Settings.Role },
-                        CarryServiceLevel = ((profile.CharacterData.PmcData.Info.Level ?? 1) / 15) + 1,
-                        Duration = 999999,
-                        Status = EInfoStatus.Started,
-                        ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L
-                    };
-                    infoService.AddOrderInfo(newOrder);
-                }
-                else if (existingOrder.Status == EInfoStatus.Expired || existingOrder.Duration >= 999999 || existingOrder.ExpirationTime < timeUtil.GetTimeStamp() + 86400 * 30)
-                {
-                    existingOrder.Status = EInfoStatus.Started;
-                    existingOrder.Duration = 999999;
-                    existingOrder.ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L;
-                }
-            }
-
-            if (existingProfiles.Count >= targetCount)
-            {
-                _ = infoService.SaveOrderAndTicketInfo();
-                return;
-            }
-
             var pmcData = profileHelper.GetPmcProfile(mcsLeadPlayerId);
             if (pmcData is null)
             {
@@ -1138,8 +1136,48 @@ namespace MiyakoCarryService.Server.Services
                 };
             }
 
+            int playerLevel = Math.Max(1, pmcData.Info.Level ?? 1);
+            int playerPrestige = pmcData.Info.PrestigeLevel ?? 0;
+
+            var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+
+            // 1. Ensure all existing bots have valid, active, non-expired orders
+            foreach (var profile in existingProfiles)
+            {
+                var botPlayerId = profile.ProfileInfo.ProfileId.Value;
+                var existingOrder = infoService.GetOrderInfoByBotPlayerProfileId(botPlayerId);
+                if (existingOrder == null)
+                {
+                    var newOrder = new OrderInfo
+                    {
+                        McsLeadPlayerId = mcsLeadPlayerId,
+                        QuestId = new MongoId(),
+                        PlayerIds = new HashSet<MongoId> { botPlayerId },
+                        SpawnType = new SpawnType { WildSpawnType = profile.CharacterData.PmcData.Info.Settings.Role, IsBoss = false, DisplayName = profile.CharacterData.PmcData.Info.Settings.Role },
+                        CarryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5),
+                        Duration = 999999,
+                        Status = EInfoStatus.Started,
+                        ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L
+                    };
+                    infoService.AddOrderInfo(newOrder);
+                }
+                else if (existingOrder.Status == EInfoStatus.Expired || existingOrder.Duration >= 999999 || existingOrder.ExpirationTime < timeUtil.GetTimeStamp() + 86400 * 30)
+                {
+                    existingOrder.CarryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5);
+                    existingOrder.Status = EInfoStatus.Started;
+                    existingOrder.Duration = 999999;
+                    existingOrder.ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L;
+                }
+            }
+
+            if (existingProfiles.Count >= targetCount)
+            {
+                _ = infoService.SaveOrderAndTicketInfo();
+                return;
+            }
+
             int countToGenerate = targetCount - existingProfiles.Count;
-            logger.Info($"[MiyakoCarryService] Auto-generating {countToGenerate} companion bots for player {mcsLeadPlayerId}...");
+            logger.Info($"[MiyakoCarryService] Auto-generating {countToGenerate} companion bots for player {mcsLeadPlayerId} (Player Level: {playerLevel})...");
 
             List<SpawnType> availableSpawnTypes = new()
             {
@@ -1148,10 +1186,12 @@ namespace MiyakoCarryService.Server.Services
                 new SpawnType { WildSpawnType = "common", IsBoss = false, DisplayName = "PMC" }
             };
 
+            compatibilityService.SetupApbsContext(mcsLeadPlayerId.ToString(), playerLevel, playerPrestige, "bigmap");
+
             for (int i = 0; i < countToGenerate; i++)
             {
                 var spawnType = availableSpawnTypes[i % availableSpawnTypes.Count];
-                int carryServiceLevel = (i % 5) + 1;
+                int carryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5);
                 var botPlayerId = new MongoId();
 
                 var orderInfo = new OrderInfo
@@ -1179,7 +1219,304 @@ namespace MiyakoCarryService.Server.Services
 
             _ = infoService.SaveOrderAndTicketInfo();
             _ = SaveAllMcsBotPlayerProfile(mcsLeadPlayerId);
+            _playerLastBotLevel[mcsLeadPlayerId] = playerLevel;
             logger.Success($"[MiyakoCarryService] Successfully auto-generated {countToGenerate} companion bots for player {mcsLeadPlayerId} (Total: {targetCount})");
+        }
+
+        public void UpdateAllCompanionBotsForPlayer(MongoId mcsLeadPlayerId, PmcData playerPmcData, int playerLevel)
+        {
+            if (!MongoId.IsValidMongoId(mcsLeadPlayerId) || playerPmcData is null)
+            {
+                return;
+            }
+
+            var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+            if (existingProfiles.Count == 0)
+            {
+                EnsureAutoGeneratedBots(mcsLeadPlayerId);
+                return;
+            }
+
+            logger.Info($"[MiyakoCarryService] Updating {existingProfiles.Count} companion bots to player level {playerLevel} for player {mcsLeadPlayerId}...");
+
+            int prestigeLevel = playerPmcData.Info?.PrestigeLevel ?? 0;
+            compatibilityService.SetupApbsContext(mcsLeadPlayerId.ToString(), playerLevel, prestigeLevel, "bigmap");
+
+            foreach (var profile in existingProfiles)
+            {
+                if (profile?.ProfileInfo?.ProfileId is null)
+                {
+                    continue;
+                }
+
+                var botPlayerId = profile.ProfileInfo.ProfileId.Value;
+                var existingOrder = infoService.GetOrderInfoByBotPlayerProfileId(botPlayerId);
+                if (existingOrder == null)
+                {
+                    existingOrder = new OrderInfo
+                    {
+                        McsLeadPlayerId = mcsLeadPlayerId,
+                        QuestId = new MongoId(),
+                        PlayerIds = new HashSet<MongoId> { botPlayerId },
+                        SpawnType = new SpawnType { WildSpawnType = profile.CharacterData.PmcData.Info.Settings.Role, IsBoss = false, DisplayName = profile.CharacterData.PmcData.Info.Settings.Role },
+                        CarryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5),
+                        Duration = 999999,
+                        Status = EInfoStatus.Started,
+                        ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L
+                    };
+                    infoService.AddOrderInfo(existingOrder);
+                }
+                else
+                {
+                    existingOrder.CarryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5);
+                    existingOrder.Status = EInfoStatus.Started;
+                    existingOrder.Duration = 999999;
+                    existingOrder.ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L;
+                }
+
+                try
+                {
+                    Generate(mcsLeadPlayerId, botPlayerId, playerPmcData, existingOrder);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error($"[MiyakoCarryService] Failed to update companion bot {botPlayerId}: {ex.Message}");
+                }
+            }
+
+            _ = infoService.SaveOrderAndTicketInfo();
+            _ = SaveAllMcsBotPlayerProfile(mcsLeadPlayerId);
+            logger.Success($"[MiyakoCarryService] Successfully updated companion bots to level {playerLevel} for player {mcsLeadPlayerId}");
+        }
+
+        public void CheckAndUpdateBotsForPlayerLevel(MongoId mcsLeadPlayerId)
+        {
+            if (!MongoId.IsValidMongoId(mcsLeadPlayerId))
+            {
+                return;
+            }
+
+            var pmcData = profileHelper.GetPmcProfile(mcsLeadPlayerId);
+            if (pmcData is null)
+            {
+                var fullProfile = profileHelper.GetFullProfile(mcsLeadPlayerId);
+                pmcData = fullProfile?.CharacterData?.PmcData;
+            }
+
+            if (pmcData is null)
+            {
+                return;
+            }
+
+            int currentLevel = Math.Max(1, pmcData.Info?.Level ?? 1);
+
+            var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+            if (existingProfiles.Count == 0)
+            {
+                EnsureAutoGeneratedBots(mcsLeadPlayerId);
+                _playerLastBotLevel[mcsLeadPlayerId] = currentLevel;
+                return;
+            }
+
+            if (_playerLastBotLevel.TryGetValue(mcsLeadPlayerId, out var lastLevel) && lastLevel == currentLevel)
+            {
+                return;
+            }
+
+            var averageBotLevel = existingProfiles.Average(p => p?.CharacterData?.PmcData?.Info?.Level ?? 1);
+            if (Math.Abs(averageBotLevel - currentLevel) <= 2 && _playerLastBotLevel.ContainsKey(mcsLeadPlayerId))
+            {
+                _playerLastBotLevel[mcsLeadPlayerId] = currentLevel;
+                return;
+            }
+
+            UpdateAllCompanionBotsForPlayer(mcsLeadPlayerId, pmcData, currentLevel);
+            _playerLastBotLevel[mcsLeadPlayerId] = currentLevel;
+        }
+
+        /// <summary>
+        /// Raid végén 1000-10000 random XP-t ad minden companion botnak.
+        /// Ha a bot szintet lép, a gear is frissül az új szint alapján.
+        /// </summary>
+        public void AwardRaidXpToCompanionBots(MongoId mcsLeadPlayerId)
+        {
+            if (!MongoId.IsValidMongoId(mcsLeadPlayerId))
+            {
+                return;
+            }
+
+            var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+            if (existingProfiles.Count == 0)
+            {
+                return;
+            }
+
+            var expTable = globalTable.Configuration.Exp.Level.ExperienceTable;
+            bool anyLeveledUp = false;
+
+            foreach (var profile in existingProfiles)
+            {
+                var pmcInfo = profile?.CharacterData?.PmcData?.Info;
+                if (pmcInfo is null)
+                {
+                    continue;
+                }
+
+                int xpGain = randomUtil.RandInt(1000, 10001);
+                long newXp = (pmcInfo.Experience ?? 0) + xpGain;
+
+                // Szintlépés kiszámítása XP alapján
+                int newLevel = pmcInfo.Level ?? 1;
+                long accumulatedXp = 0;
+                for (int i = 0; i < expTable.Length; i++)
+                {
+                    accumulatedXp += expTable[i].Experience;
+                    if (newXp < accumulatedXp)
+                    {
+                        newLevel = i + 1;
+                        break;
+                    }
+                    if (i == expTable.Length - 1)
+                    {
+                        newLevel = expTable.Length;
+                    }
+                }
+                newLevel = Math.Clamp(newLevel, 1, 79);
+
+                bool leveledUp = newLevel > (pmcInfo.Level ?? 1);
+                pmcInfo.Experience = (int)Math.Min(newXp, int.MaxValue);
+                pmcInfo.Level = newLevel;
+
+                if (leveledUp)
+                {
+                    anyLeveledUp = true;
+                    logger.Info($"[MiyakoCarryService] Companion bot {profile.ProfileInfo?.ProfileId} leveled up to {newLevel} after raid XP gain (+{xpGain} XP)");
+                }
+            }
+
+            _ = SaveAllMcsBotPlayerProfile(mcsLeadPlayerId);
+
+            // Ha valamelyik bot szintet lépett, frissítjük a gear-jét is
+            if (anyLeveledUp)
+            {
+                CheckAndUpdateBotsForPlayerLevel(mcsLeadPlayerId);
+            }
+        }
+
+        /// <summary>
+        /// Raid végén kivált egy random companion botot és generál helyette egy újat.
+        /// Az új bot a játékos aktuális szintje alapján kerül generálásra (±10 random faktor).
+        /// </summary>
+        public void RotateOneCompanionBot(MongoId mcsLeadPlayerId, int count = 1)
+        {
+            if (!MongoId.IsValidMongoId(mcsLeadPlayerId))
+            {
+                return;
+            }
+
+            var pmcData = profileHelper.GetPmcProfile(mcsLeadPlayerId);
+            if (pmcData is null)
+            {
+                var fullProfile = profileHelper.GetFullProfile(mcsLeadPlayerId);
+                pmcData = fullProfile?.CharacterData?.PmcData;
+            }
+            if (pmcData is null)
+            {
+                return;
+            }
+
+            int playerLevel = Math.Max(1, pmcData.Info?.Level ?? 1);
+            int playerPrestige = pmcData.Info?.PrestigeLevel ?? 0;
+            int carryServiceLevel = Math.Clamp((playerLevel / 15) + 1, 1, 5);
+
+            if (compatibilityService.HasAPBS)
+            {
+                compatibilityService.SetupApbsContext(mcsLeadPlayerId.ToString(), playerLevel, playerPrestige, "bigmap");
+            }
+
+            List<SpawnType> availableSpawnTypes = new()
+            {
+                new SpawnType { WildSpawnType = "pmcUSEC", IsBoss = false, DisplayName = "USEC" },
+                new SpawnType { WildSpawnType = "pmcBEAR", IsBoss = false, DisplayName = "BEAR" },
+                new SpawnType { WildSpawnType = "common", IsBoss = false, DisplayName = "PMC" }
+            };
+
+            int rotated = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+                if (existingProfiles.Count == 0)
+                {
+                    break;
+                }
+
+                // Random bot kiválasztása eltávolításhoz
+                int removeIndex = randomUtil.RandInt(0, existingProfiles.Count);
+                var profileToRemove = existingProfiles[removeIndex];
+                var botIdToRemove = profileToRemove?.ProfileInfo?.ProfileId;
+                if (botIdToRemove == null)
+                {
+                    continue;
+                }
+
+                string botNickname = profileToRemove?.CharacterData?.PmcData?.Info?.Nickname ?? "Unknown";
+                logger.Info($"[MiyakoCarryService] [{i + 1}/{count}] Rotating companion bot '{botNickname}' out of friend list for player {mcsLeadPlayerId}.");
+
+                // Order eltávolítása
+                var existingOrder = infoService.GetOrderInfoByBotPlayerProfileId(botIdToRemove.Value);
+                if (existingOrder != null)
+                {
+                    infoService.RemoveOrderInfo(existingOrder);
+                }
+
+                // Profil eltávolítása memóriából és lemezről
+                var file = System.IO.Path.Combine(_profileFolderDir, mcsLeadPlayerId.ToString(), $"{botIdToRemove}.json");
+                if (_profiles.TryGetValue(mcsLeadPlayerId, out var playerBots))
+                {
+                    playerBots.TryRemove(botIdToRemove.Value, out _);
+                }
+                if (fileUtil.FileExists(file))
+                {
+                    fileUtil.DeleteFile(file);
+                }
+
+                // Új bot generálása a helyére
+                var spawnType = randomUtil.GetArrayValue(availableSpawnTypes.ToArray());
+                var newBotPlayerId = new MongoId();
+
+                var newOrderInfo = new OrderInfo
+                {
+                    McsLeadPlayerId = mcsLeadPlayerId,
+                    QuestId = new MongoId(),
+                    PlayerIds = new HashSet<MongoId> { newBotPlayerId },
+                    SpawnType = spawnType,
+                    CarryServiceLevel = carryServiceLevel,
+                    Duration = 999999,
+                    Status = EInfoStatus.Started,
+                    ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L
+                };
+
+                infoService.AddOrderInfo(newOrderInfo);
+                try
+                {
+                    var newProfile = Generate(mcsLeadPlayerId, newBotPlayerId, pmcData, newOrderInfo);
+                    string newNickname = newProfile?.CharacterData?.PmcData?.Info?.Nickname ?? "Unknown";
+                    int newLevel = newProfile?.CharacterData?.PmcData?.Info?.Level ?? 0;
+                    logger.Success($"[MiyakoCarryService] New companion bot '{newNickname}' (Level {newLevel}) added to friend list for player {mcsLeadPlayerId}.");
+                    rotated++;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error($"[MiyakoCarryService] Failed to generate replacement companion bot: {ex.Message}");
+                }
+            }
+
+            if (rotated > 0)
+            {
+                logger.Success($"[MiyakoCarryService] Rotated {rotated}/{count} companion bots for player {mcsLeadPlayerId}.");
+                _ = infoService.SaveOrderAndTicketInfo();
+                _ = SaveAllMcsBotPlayerProfile(mcsLeadPlayerId);
+            }
         }
 
         public void AutoGenerateBotsForLoadedProfiles(int targetCount = 100)
@@ -1197,6 +1534,7 @@ namespace MiyakoCarryService.Server.Services
                             continue;
                         }
                         EnsureAutoGeneratedBots(playerId, targetCount);
+                        CheckAndUpdateBotsForPlayerLevel(playerId);
                     }
                 }
             }
