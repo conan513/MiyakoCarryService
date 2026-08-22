@@ -27,11 +27,31 @@ namespace MiyakoCarryService.Client.Mgrs
         private Dictionary<MongoID, Subtitles> _subTitles = new();
         private Dictionary<EPhraseTrigger, string> _talkContents;
         private Dictionary<EPhraseTrigger, Func<string, McsMsg, Player, Player, string>> _phraseHandleMaps;
+        private Dictionary<string, float> _squadPhraseCooldowns = new();
+        private Dictionary<EPhraseTrigger, float> _triggerCooldownDurations;
         private McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
 
         public override void Start()
         {
             base.Start();
+            _triggerCooldownDurations = new()
+            {
+                { EPhraseTrigger.OnFirstContact, 3.5f },
+                { EPhraseTrigger.Roger, 2.5f },
+                { EPhraseTrigger.Clear, 3.5f },
+                { EPhraseTrigger.EnemyDown, 3.0f },
+                { EPhraseTrigger.Regroup, 2.5f },
+                { EPhraseTrigger.HoldPosition, 2.5f },
+                { EPhraseTrigger.Going, 2.5f },
+                { EPhraseTrigger.OnPosition, 2.5f },
+                { EPhraseTrigger.FollowMe, 2.5f },
+                { EPhraseTrigger.OnFight, 3.0f },
+                { EPhraseTrigger.OnFriendlyDown, 3.5f },
+                { EPhraseTrigger.StartHeal, 2.0f },
+                { EPhraseTrigger.OnOutOfAmmo, 3.0f },
+                { EPhraseTrigger.Negative, 2.0f }
+            };
+
             _talkContents = new()
             {
                 { EPhraseTrigger.None, "未知的回应，应进行反馈。" },
@@ -118,8 +138,44 @@ namespace MiyakoCarryService.Client.Mgrs
             }
         }
 
+        private bool ShouldThrottleSquadTalk(Player mcsLeadPlayer, McsMsg msg)
+        {
+            if (mcsLeadPlayer == null || msg == null)
+            {
+                return false;
+            }
+
+            if (_triggerCooldownDurations == null || !_triggerCooldownDurations.TryGetValue(msg.PhraseTrigger, out var cooldown))
+            {
+                return false;
+            }
+
+            var key = $"{mcsLeadPlayer.ProfileId}_{msg.PhraseTrigger}";
+            var now = Time.time;
+            if (_squadPhraseCooldowns.TryGetValue(key, out var nextAllowedTime))
+            {
+                if (now < nextAllowedTime)
+                {
+                    return true;
+                }
+            }
+
+            _squadPhraseCooldowns[key] = now + cooldown;
+            return false;
+        }
+
         public void TalkMsg(Player mcsLeadPlayer, Player mcsBotPlayer, McsMsg msg)
         {
+            if (mcsLeadPlayer == null || mcsBotPlayer == null || msg == null)
+            {
+                return;
+            }
+
+            if (ShouldThrottleSquadTalk(mcsLeadPlayer, msg))
+            {
+                return;
+            }
+
             if (MiyakoCarryServicePlugin.FikaInstalled && Tools.IsHost)
             {
                 var myPlayer = Singleton<GameWorld>.Instance.MainPlayer;
@@ -278,6 +334,10 @@ namespace MiyakoCarryService.Client.Mgrs
         public override void OnRaidEnded()
         {
             base.OnRaidEnded();
+            if (_squadPhraseCooldowns != null)
+            {
+                _squadPhraseCooldowns.Clear();
+            }
             if (_subTitles != null)
             {
                 foreach (var subTitle in _subTitles.Values)

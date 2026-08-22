@@ -89,6 +89,14 @@ namespace MiyakoCarryService.Server.Controllers
         {
             return infoService.IsOrderExpiredByBotPlayerProfileId(mcsBotPlayerId);
         }
+        public long GetRemainingCooldownSeconds(MongoId mcsBotPlayerId)
+        {
+            return infoService.GetRemainingCooldownSeconds(mcsBotPlayerId);
+        }
+        public void SetBotCooldown(MongoId mcsBotPlayerId, int cooldownMinutes)
+        {
+            infoService.SetBotCooldown(mcsBotPlayerId, cooldownMinutes);
+        }
         public void ApplyRenew(MongoId targetQuestId, int duration)
         {
             infoService.ApplyRenew(targetQuestId, duration);

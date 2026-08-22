@@ -464,9 +464,16 @@ namespace MiyakoCarryService.Server.Services
                     }
                 }
 
-                foreach (var tkPunishPlayerId in tkPunishPlayerIds)
+                if (info.VictimBotId.HasValue)
                 {
-                    profileService.TeamKillPunish(tkPunishPlayerId);
+                    profileService.TeamKillBotCooldown(info.VictimBotId.Value);
+                }
+                else
+                {
+                    foreach (var tkPunishPlayerId in tkPunishPlayerIds)
+                    {
+                        profileService.TeamKillPunish(tkPunishPlayerId);
+                    }
                 }
             }
 

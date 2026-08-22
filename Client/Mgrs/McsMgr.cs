@@ -426,11 +426,12 @@ namespace MiyakoCarryService.Client.Mgrs
             );
         }
 
-        public void AddPunish(MongoID friendlyFirePlayerId, double diff, bool teamKill, bool punishEveryone)
+        public void AddPunish(MongoID friendlyFirePlayerId, double diff, bool teamKill, bool punishEveryone, MongoID? victimBotId = null)
         {
             var penalty = new FriendlyFirePenalty
             {
                 FriendlyFirePlayerId = friendlyFirePlayerId,
+                VictimBotId = victimBotId,
                 Diff = diff,
                 TeamKill = teamKill,
                 PunishEveryone = punishEveryone
@@ -444,9 +445,10 @@ namespace MiyakoCarryService.Client.Mgrs
             return new FriendlyFirePenalty
             {
                 FriendlyFirePlayerId = existing.FriendlyFirePlayerId,
+                VictimBotId = newValue.VictimBotId ?? existing.VictimBotId,
                 Diff = existing.Diff + newValue.Diff,
-                TeamKill = newValue.TeamKill,
-                PunishEveryone = newValue.PunishEveryone
+                TeamKill = existing.TeamKill || newValue.TeamKill,
+                PunishEveryone = existing.PunishEveryone || newValue.PunishEveryone
             };
         }
 

@@ -10,6 +10,9 @@ namespace MiyakoCarryService.Client.Models
         [DataMember(Name = "FriendlyFirePlayerId")]
         public MongoID FriendlyFirePlayerId;
 
+        [DataMember(Name = "VictimBotId")]
+        public MongoID? VictimBotId = null;
+
         [DataMember(Name = "Diff")]
         public double Diff;
 

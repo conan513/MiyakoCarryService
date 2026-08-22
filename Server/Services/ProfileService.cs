@@ -180,6 +180,12 @@ namespace MiyakoCarryService.Server.Services
             }
         }
 
+        public void TeamKillBotCooldown(MongoId botProfileId)
+        {
+            var cooldownMinutes = configService.GetMcsPluginConfig().ServerConfig.TeamKillCooldownMinutes;
+            infoService.SetBotCooldown(botProfileId, cooldownMinutes);
+        }
+
         public void TeamKillPunish(MongoId mcsLeadPlayerId)
         {
             infoService.SetAllOrderInfosToExpire(mcsLeadPlayerId, ProcessExpiredMcsBotPlayerNotify);
@@ -1074,8 +1080,38 @@ namespace MiyakoCarryService.Server.Services
             }
 
             var existingProfiles = GetAllMcsBotPlayerProfileByBossId(mcsLeadPlayerId);
+
+            // 1. Ensure all existing bots have valid, active, non-expired orders
+            foreach (var profile in existingProfiles)
+            {
+                var botPlayerId = profile.ProfileInfo.ProfileId.Value;
+                var existingOrder = infoService.GetOrderInfoByBotPlayerProfileId(botPlayerId);
+                if (existingOrder == null)
+                {
+                    var newOrder = new OrderInfo
+                    {
+                        McsLeadPlayerId = mcsLeadPlayerId,
+                        QuestId = new MongoId(),
+                        PlayerIds = new HashSet<MongoId> { botPlayerId },
+                        SpawnType = new SpawnType { WildSpawnType = profile.CharacterData.PmcData.Info.Settings.Role, IsBoss = false, DisplayName = profile.CharacterData.PmcData.Info.Settings.Role },
+                        CarryServiceLevel = ((profile.CharacterData.PmcData.Info.Level ?? 1) / 15) + 1,
+                        Duration = 999999,
+                        Status = EInfoStatus.Started,
+                        ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L
+                    };
+                    infoService.AddOrderInfo(newOrder);
+                }
+                else if (existingOrder.Status == EInfoStatus.Expired || existingOrder.Duration >= 999999 || existingOrder.ExpirationTime < timeUtil.GetTimeStamp() + 86400 * 30)
+                {
+                    existingOrder.Status = EInfoStatus.Started;
+                    existingOrder.Duration = 999999;
+                    existingOrder.ExpirationTime = timeUtil.GetTimeStamp() + 3153600000L;
+                }
+            }
+
             if (existingProfiles.Count >= targetCount)
             {
+                _ = infoService.SaveOrderAndTicketInfo();
                 return;
             }
 

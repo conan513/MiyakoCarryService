@@ -54,7 +54,19 @@ namespace MiyakoCarryService.Server.Patches.Friend
 
                     var mcsPmcData = mcsBotPlayerProfile.CharacterData.PmcData;
 
-                    var displayName = _infoController.IsOrderExpiredByBotPlayerProfileId(mcsPmcData.Id.Value) ? $"({_serverLocalisationService.GetText(Locales.MCSBOTPLAYEREXPIRED)}) {mcsPmcData.Info.Nickname}" : mcsPmcData.Info.Nickname;
+                    var isInjured = _infoController.IsOrderExpiredByBotPlayerProfileId(mcsPmcData.Id.Value);
+                    string displayName;
+                    if (isInjured)
+                    {
+                        var remainingSeconds = _infoController.GetRemainingCooldownSeconds(mcsPmcData.Id.Value);
+                        var remainingMinutes = System.Math.Max(1, (int)System.Math.Ceiling(remainingSeconds / 60.0));
+                        var statusText = _serverLocalisationService.GetText(Locales.MCSBOTPLAYERINJURED);
+                        displayName = $"({statusText} - {remainingMinutes}m) {mcsPmcData.Info.Nickname}";
+                    }
+                    else
+                    {
+                        displayName = mcsPmcData.Info.Nickname;
+                    }
 
                     var searchFriendResponse = new SearchFriendResponse
                     {

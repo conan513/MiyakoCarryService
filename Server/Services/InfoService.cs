@@ -81,17 +81,12 @@ namespace MiyakoCarryService.Server.Services
         {
             foreach (var orderInfo in _orderInfos.Values)
             {
-                if (orderInfo.Status is not (EInfoStatus.Started or EInfoStatus.Expired))
-                {
-                    continue;
-                }
-
                 if (orderInfo.PlayerIds.Contains(mcsBotPlayerId))
                 {
                     return true;
                 }
             }
-            return false;
+            return true;
         }
 
         public void CreateOrderInfo(MongoId mcsLeadPlayerId, int players, SpawnType spawnType, int carryServiceLevel, int duration, MongoId questId)
@@ -296,6 +291,11 @@ namespace MiyakoCarryService.Server.Services
                     continue;
                 }
 
+                if (orderInfo.Duration >= 999999 || orderInfo.ExpirationTime >= 2000000000L)
+                {
+                    continue;
+                }
+
                 if (orderInfo.Status != EInfoStatus.Started)
                 {
                     continue;
@@ -372,6 +372,11 @@ namespace MiyakoCarryService.Server.Services
 
             foreach (var orderInfo in orderInfos)
             {
+                if (orderInfo.Duration >= 999999 || orderInfo.ExpirationTime >= 2000000000L)
+                {
+                    continue;
+                }
+
                 if (currentTime < orderInfo.ExpirationTime - 1)
                 {
                     continue;
@@ -447,10 +452,53 @@ namespace MiyakoCarryService.Server.Services
             return orderInfo;
         }
 
+        public void SetBotCooldown(MongoId botProfileId, int cooldownMinutes)
+        {
+            var orderInfo = GetOrderInfoByBotPlayerProfileId(botProfileId);
+            if (orderInfo != null)
+            {
+                var currentTime = timeUtil.GetTimeStamp();
+                orderInfo.Status = EInfoStatus.Expired;
+                orderInfo.ExpirationTime = currentTime + (cooldownMinutes * 60);
+                _ = SaveOrderAndTicketInfo();
+            }
+        }
+
+        public long GetRemainingCooldownSeconds(MongoId botProfileId)
+        {
+            var orderInfo = GetOrderInfoByBotPlayerProfileId(botProfileId);
+            if (orderInfo == null || orderInfo.Status != EInfoStatus.Expired)
+            {
+                return 0;
+            }
+            var currentTime = timeUtil.GetTimeStamp();
+            var remaining = orderInfo.ExpirationTime - currentTime;
+            return remaining > 0 ? remaining : 0;
+        }
+
         public bool IsOrderExpiredByBotPlayerProfileId(MongoId mcsBotPlayerProfileId)
         {
             var orderInfo = GetOrderInfoByBotPlayerProfileId(mcsBotPlayerProfileId);
-            return orderInfo is not null && orderInfo.Status is EInfoStatus.Expired;
+            if (orderInfo is null)
+            {
+                return false;
+            }
+            
+            if (orderInfo.Status is EInfoStatus.Expired)
+            {
+                var currentTime = timeUtil.GetTimeStamp();
+                if (currentTime >= orderInfo.ExpirationTime)
+                {
+                    // Cooldown has elapsed -> Automatically recover bot to active Started state!
+                    orderInfo.Status = EInfoStatus.Started;
+                    orderInfo.ExpirationTime = currentTime + 3153600000L;
+                    _ = SaveOrderAndTicketInfo();
+                    return false;
+                }
+                return true; // Still in cooldown/injured
+            }
+
+            return false;
         }
 
         public HashSet<MongoId>? SettleOrderByBotPlayerProfileId(MongoId mcsBotPlayerProfileId)

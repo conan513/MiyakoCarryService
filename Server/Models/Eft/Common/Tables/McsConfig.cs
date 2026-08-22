@@ -22,6 +22,9 @@ namespace MiyakoCarryService.Server.Models.Eft.Common.Tables
         [JsonPropertyName("AutoGenerateBotCount")]
         public int AutoGenerateBotCount { get; set; } = 100;
 
+        [JsonPropertyName("TeamKillCooldownMinutes")]
+        public int TeamKillCooldownMinutes { get; set; } = 15;
+
         [JsonPropertyName("TicketPricePerPercent")]
         public int TicketPricePerPercent 
         { 
