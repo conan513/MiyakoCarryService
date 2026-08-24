@@ -20,6 +20,7 @@
     "Mcs/McsInventoryModeRagfairRefuse": "处于护航库存模式，无法在跳蚤市场上架交易单",
     "Mcs/NewVersionNotify": "宫子护航店 检测到新版本: {{CurrentVersion}} ---> {{LatestVersion}}",
     "Mcs/McsBotPlayerExpired": "已过期",
+    "Mcs/McsBotPlayerInjured": "养伤中",
     "Mcs/MiyakoTraderLlmErrorDetail": "AI 服务暂时不可用，请稍后再试。\n错误原因：{{Reason}}",
     "Mcs/HttpRequestTimeout": "{{ProviderName}} 请求超时",
     "Mcs/HttpException": "{{ProviderName}} 异常：{{Detail}}",

@@ -280,7 +280,19 @@ namespace MiyakoCarryService.Client.Utils
                 var reachDist = Expression.Parameter(typeof(float), "reachDist");
                 var checkSameWay = Expression.Parameter(typeof(bool), "checkSameWay");
 
-                var call = Expression.Call(Expression.Convert(instance, SainMoverType), WalkToPointMethod, point, mustHaveCompletePath, reachDist, checkSameWay);
+                var parameters = WalkToPointMethod.GetParameters();
+                var args = new System.Collections.Generic.List<Expression>();
+                foreach (var p in parameters)
+                {
+                    if (p.ParameterType == typeof(Vector3)) args.Add(point);
+                    else if (p.ParameterType == typeof(float)) args.Add(reachDist);
+                    else if (p.Name.ToLowerInvariant().Contains("path")) args.Add(mustHaveCompletePath);
+                    else if (p.Name.ToLowerInvariant().Contains("way")) args.Add(checkSameWay);
+                    else if (p.HasDefaultValue) args.Add(Expression.Constant(p.DefaultValue, p.ParameterType));
+                    else args.Add(Expression.Default(p.ParameterType));
+                }
+
+                var call = Expression.Call(Expression.Convert(instance, SainMoverType), WalkToPointMethod, args);
                 return Expression.Lambda<Action<object, Vector3, bool, float, bool>>(call, instance, point, mustHaveCompletePath, reachDist, checkSameWay).Compile();
             }
             catch (Exception e)
@@ -305,7 +317,19 @@ namespace MiyakoCarryService.Client.Utils
                 var reachDist = Expression.Parameter(typeof(float), "reachDist");
                 var checkSameWay = Expression.Parameter(typeof(bool), "checkSameWay");
 
-                var call = Expression.Call(Expression.Convert(instance, SainMoverType), RunToPointMethod, point, mustHaveCompletePath, reachDist, checkSameWay);
+                var parameters = RunToPointMethod.GetParameters();
+                var args = new System.Collections.Generic.List<Expression>();
+                foreach (var p in parameters)
+                {
+                    if (p.ParameterType == typeof(Vector3)) args.Add(point);
+                    else if (p.ParameterType == typeof(float)) args.Add(reachDist);
+                    else if (p.Name.ToLowerInvariant().Contains("path")) args.Add(mustHaveCompletePath);
+                    else if (p.Name.ToLowerInvariant().Contains("way")) args.Add(checkSameWay);
+                    else if (p.HasDefaultValue) args.Add(Expression.Constant(p.DefaultValue, p.ParameterType));
+                    else args.Add(Expression.Default(p.ParameterType));
+                }
+
+                var call = Expression.Call(Expression.Convert(instance, SainMoverType), RunToPointMethod, args);
                 return Expression.Lambda<Action<object, Vector3, bool, float, bool>>(call, instance, point, mustHaveCompletePath, reachDist, checkSameWay).Compile();
             }
             catch (Exception e)
