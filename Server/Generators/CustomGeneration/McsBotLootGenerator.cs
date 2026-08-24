@@ -1,6 +1,7 @@
 
-using SPTarkov.Common.Models.Logging;
+using System;
 using System.Collections.Generic;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Generators.Bot;
 using SPTarkov.Server.Core.Generators.Loot;
@@ -69,14 +70,17 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
                 return;
             }
 
-            var healingItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Healing.Weights);
+            // Companion botoknak legalább 3 healing item garantálva (vest/backpack-be kerülnek)
+            var healingItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Healing.Weights), 3);
             var drugItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Drugs.Weights);
             var foodItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Food.Weights);
             var drinkItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Drink.Weights);
-            var stimItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Stims.Weights);
+            // Companion botoknak legalább 2 stim garantálva
+            var stimItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Stims.Weights), 2);
             // var grenadeCount = weightedRandomHelper.GetWeightedValue(itemCounts.Grenades.Weights);
 
-            if (botGenerationDetails.IsPmc && pmcConfig.ForceHealingItemsIntoSecure)
+            // Mindig adjuk hozzá a PMC forced medical item-eket (config-tól függetlenül)
+            if (botGenerationDetails.IsPmc)
             {
                 AddForcedMedicalItemsToPmcSecure(botInventory, botGenerationDetails.RoleLowercase, botId);
             }
@@ -213,24 +217,51 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
                 );
             }
             
-            AddAluminiumSplintsToSecure(botId, botInventory, 3);
+            AddGuaranteedMedicalItemsToCarryContainers(botId, botInventory);
         }
 
-        public void AddAluminiumSplintsToSecure(MongoId botId, BotBaseInventory botInventory, int count)
+        /// <summary>
+        /// 向护航的背包/战术背心/口袋添加固定医疗品（这些槽位是BotFirstAid能访问的）
+        /// </summary>
+        public void AddGuaranteedMedicalItemsToCarryContainers(MongoId botId, BotBaseInventory botInventory)
+        {
+            // Célzott tárolók: hátizsák, vest, zsebek (BotFirstAid ezeket keresi)
+            HashSet<EquipmentSlots> carrySlots = [EquipmentSlots.Backpack, EquipmentSlots.TacticalVest, EquipmentSlots.Pockets];
+
+            // Grizzly medkit (nagy HP visszatöltés, vérzés, törés kezelés)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT, 1);
+
+            // AFAK kompakt kötszerkészlet (vérzés, seb)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT, 2);
+
+            // CAT hemostatikus érszorító (könnyű és nehéz vérzés megállítása)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET, 2);
+
+            // CMS sebészeti készlet (fekete testrészek, törések)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_CMS_SURGICAL_KIT, 1);
+
+            // Zagustin hemostatikus stim (vérzés gyors megállítása)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.STIM_ZAGUSTIN_HEMOSTATIC_DRUG_INJECTOR, 2);
+
+            // Alumínium sín (törések)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_ALUMINUM_SPLINT, 2);
+        }
+
+        private void AddItemsToCarrySlots(MongoId botId, BotBaseInventory botInventory, HashSet<EquipmentSlots> slots, MongoId itemTpl, int count)
         {
             for (var i = 0; i < count; i++)
             {
-                var splintId = new MongoId();
+                var itemId = new MongoId();
                 var itemsToAdd = new List<Item>
                 {
-                    new() { Id = splintId, Template = ItemTpl.MEDICAL_ALUMINUM_SPLINT }
+                    new() { Id = itemId, Template = itemTpl }
                 };
 
                 botGeneratorHelper.AddItemWithChildrenToEquipmentSlot(
                     botId,
-                    [EquipmentSlots.SecuredContainer],
-                    splintId,
-                    ItemTpl.MEDICAL_ALUMINUM_SPLINT,
+                    slots,
+                    itemId,
+                    itemTpl,
                     itemsToAdd,
                     botInventory
                 );
