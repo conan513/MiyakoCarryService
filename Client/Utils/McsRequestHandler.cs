@@ -129,6 +129,11 @@ namespace MiyakoCarryService.Client.Utils
             await PostJsonAsync("/mcs/client/trading/api/friendlyFirePenalty", friendlyFirePenalty);
         }
 
+        public static async Task ReportBotDied(McsBotDeath mcsBotDeath)
+        {
+            await PostJsonAsync("/mcs/client/game/bot/died", mcsBotDeath);
+        }
+
         public static async Task SendCompensationRequest(Compensation compensation)
         {
             await PostJsonAsync("/mcs/client/trading/api/compensation", compensation);

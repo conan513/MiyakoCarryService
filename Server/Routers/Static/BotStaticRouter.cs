@@ -19,6 +19,10 @@ namespace MiyakoCarryService.Server.Routers.Static
                 "/mcs/client/game/bot/generate",
                 async (url, info, sessionId, output, cancellationToken) => await botCallbacks.SpawnMcsBotPlayer(url, info, sessionId)
             ),
+            new RouteAction<McsBotDeathRequestData>(
+                "/mcs/client/game/bot/died",
+                async (url, info, sessionId, output, cancellationToken) => await botCallbacks.ReportBotDied(url, info, sessionId)
+            ),
             new RouteAction<EmptyRequestData>(
                 "/mcs/singleplayer/settings/bot/get",
                 async (url, info, sessionId, output, cancellationToken) => await botCallbacks.GetMcsBotPlayerConfigs(url, info, sessionId)

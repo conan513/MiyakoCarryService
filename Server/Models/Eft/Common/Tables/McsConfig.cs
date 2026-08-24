@@ -20,10 +20,13 @@ namespace MiyakoCarryService.Server.Models.Eft.Common.Tables
         public bool CheckIfdian { get; set; } = true;
 
         [JsonPropertyName("AutoGenerateBotCount")]
-        public int AutoGenerateBotCount { get; set; } = 100;
+        public int AutoGenerateBotCount { get; set; } = 10;
 
         [JsonPropertyName("TeamKillCooldownMinutes")]
-        public int TeamKillCooldownMinutes { get; set; } = 15;
+        public int TeamKillCooldownMinutes { get; set; } = 60;
+
+        [JsonPropertyName("BotDeathCooldownMinutes")]
+        public int BotDeathCooldownMinutes { get; set; } = 60;
 
         [JsonPropertyName("TicketPricePerPercent")]
         public int TicketPricePerPercent 

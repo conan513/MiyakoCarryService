@@ -43,8 +43,8 @@ namespace MiyakoCarryService.Server.Patches.Group
             // Raid végén random 1000-10000 XP a companion botoknak
             _profileController.AwardRaidXpToCompanionBots(sessionId);
 
-            // Raid végén 5 random companion bot kicserélése friss, újgenerált botokra
-            _profileController.RotateOneCompanionBot(sessionId, 5);
+            // Raid végén 2 random companion bot kicserélése friss, újgenerált botokra
+            _profileController.RotateOneCompanionBot(sessionId, 2);
         }
     }
 }

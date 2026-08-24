@@ -12,7 +12,8 @@ namespace MiyakoCarryService.Server.Callbacks
     [Injectable]
     public class BotCallbacks(
         HttpResponseUtil httpResponseUtil,
-        RaidController raidController
+        RaidController raidController,
+        ProfileController profileController
     )
     {
         /// <summary>
@@ -21,6 +22,15 @@ namespace MiyakoCarryService.Server.Callbacks
         public virtual async ValueTask<string> SpawnMcsBotPlayer(string url, McsBotPlayerTypeRequestData info, MongoId mcsLeadPlayerId)
         {
             return httpResponseUtil.NoBody(await raidController.SpawnMcsBotPlayer(mcsLeadPlayerId, info.Side));
+        }
+
+        /// <summary>
+        /// 处理 /mcs/client/game/bot/died
+        /// </summary>
+        public virtual ValueTask<string> ReportBotDied(string url, McsBotDeathRequestData info, MongoId mcsLeadPlayerId)
+        {
+            profileController.BotDiedCooldown(info.BotProfileId);
+            return ValueTask.FromResult(httpResponseUtil.NullResponse());
         }
 
         /// <summary>

@@ -246,11 +246,16 @@ namespace MiyakoCarryService.Server.Services
             {
                 var members = _leadMemberGroups.GetOrAdd(mcsLeadPlayerId, _ => new List<int>());
                 var profiles = new List<SptProfile>();
-                foreach (var mcsAid in members)
+                foreach (var mcsAid in members.ToList())
                 {
                     var profile = profileService.GetMcsBotPlayerProfileByAccountId(mcsLeadPlayerId, mcsAid);
                     if (profile is not null)
                     {
+                        if (infoService.IsOrderExpiredByBotPlayerProfileId(profile.ProfileInfo.ProfileId.Value))
+                        {
+                            members.Remove(mcsAid);
+                            continue;
+                        }
                         profiles.Add(profile);
                     }
                 }

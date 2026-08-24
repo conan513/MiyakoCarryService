@@ -5,6 +5,7 @@ using HarmonyLib;
 using MiyakoCarryService.Client.Events;
 using MiyakoCarryService.Client.Extensions;
 using MiyakoCarryService.Client.Mgrs;
+using MiyakoCarryService.Client.Models;
 using MiyakoCarryService.Client.Utils;
 using SPT.Reflection.Patching;
 
@@ -52,6 +53,14 @@ namespace MiyakoCarryService.Client.Patches.Bots
             if (!Tools.IsHost)
             {
                 return;
+            }
+
+            if (McsMgr.IsMcsBotPlayer(__instance.ProfileId))
+            {
+                TasksExtensions.HandleExceptions(McsRequestHandler.ReportBotDied(new McsBotDeath
+                {
+                    BotProfileId = __instance.ProfileId
+                }));
             }
 
             EventMgr.Notify(new OnPlayerDeadEvent
