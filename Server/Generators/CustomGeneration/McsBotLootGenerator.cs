@@ -77,7 +77,7 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
             var drinkItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Drink.Weights);
             // Companion botoknak legalább 2 stim garantálva
             var stimItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Stims.Weights), 2);
-            // var grenadeCount = weightedRandomHelper.GetWeightedValue(itemCounts.Grenades.Weights);
+            var grenadeCount = weightedRandomHelper.GetWeightedValue(itemCounts.Grenades.Weights);
 
             // Mindig adjuk hozzá a PMC forced medical item-eket (config-tól függetlenül)
             if (botGenerationDetails.IsPmc)
@@ -178,23 +178,23 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
                 botGenerationDetails.IsPmc
             );
 
-            // // Grenades
-            // AddLootFromPool(
-            //     botId,
-            //     botLootCacheService.GetLootFromCache(
-            //         botGenerationDetails.RoleLowercase,
-            //         botGenerationDetails.IsPmc,
-            //         LootCacheType.GrenadeItems,
-            //         botJsonTemplate
-            //     ),
-            //     [EquipmentSlots.Pockets, EquipmentSlots.TacticalVest],
-            //     grenadeCount,
-            //     botInventory,
-            //     botGenerationDetails.RoleLowercase,
-            //     null,
-            //     0,
-            //     botGenerationDetails.IsPmc
-            // );
+            // Grenades (random, a bot template Grenades.Weights alapján)
+            AddLootFromPool(
+                botId,
+                botLootCacheService.GetLootFromCache(
+                    botGenerationDetails.RoleLowercase,
+                    botGenerationDetails.IsPmc,
+                    LootCacheType.GrenadeItems,
+                    botJsonTemplate
+                ),
+                new HashSet<EquipmentSlots> { EquipmentSlots.Pockets, EquipmentSlots.TacticalVest, EquipmentSlots.Backpack },
+                grenadeCount,
+                botInventory,
+                botGenerationDetails.RoleLowercase,
+                botItemLimits,
+                0,
+                botGenerationDetails.IsPmc
+            );
 
             // Secure
             if (!botGenerationDetails.IsPmc || (botGenerationDetails.IsPmc && pmcConfig.AddSecureContainerLootFromBotConfig))
@@ -245,6 +245,7 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
 
             // Alumínium sín (törések)
             AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_ALUMINUM_SPLINT, 2);
+
         }
 
         private void AddItemsToCarrySlots(MongoId botId, BotBaseInventory botInventory, HashSet<EquipmentSlots> slots, MongoId itemTpl, int count)
