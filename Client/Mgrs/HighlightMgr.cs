@@ -8,6 +8,7 @@ namespace MiyakoCarryService.Client.Mgrs
     /// </summary>
     public class HighlightMgr : BaseMgr
     {
+
         public override void Start()
         {
             base.Start();

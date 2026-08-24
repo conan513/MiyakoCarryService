@@ -13,7 +13,7 @@
     <AssemblyCompany>Himesamanoyume</AssemblyCompany>
     <AssemblyProduct>MiyakoCarryServiceFika</AssemblyProduct>  
     <AssemblyCopyright>Copyright © 姫様の夢 2025 - 2026</AssemblyCopyright> 
-    <Version>1.1.0.2</Version>
+    <Version>1.1.1.0</Version>
     <AssemblyTitle>MiyakoCarryServiceFika</AssemblyTitle>
     <Trademark>https://forge.sp-tarkov.com/addon/86/miyako-carry-service-fika-addon</Trademark>
     <RootNamespace>MiyakoCarryService.Fika</RootNamespace>
@@ -49,11 +49,17 @@
     <Reference Include="DOTween" HintPath="..\Ref\DOTween.dll" Private="false" />
     <Reference Include="UnityEngine.UIModule" HintPath="..\Ref\UnityEngine.UIModule.dll" Private="false" />
     <Reference Include="UnityEngine.UI" HintPath="..\Ref\UnityEngine.UI.dll" Private="false" />
-    <Reference Include="Fika.Core" HintPath="..\Ref\Fika.Core-2.4.0.dll" Private="false" />
+    <Reference Include="Fika.Core" HintPath="..\Ref\Fika.Core-2.4.1.dll" Private="false" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Client\MiyakoCarryServiceClient.csproj" />
+    <Reference Include="Himesamanoyume.MiyakoCarryServiceClient">
+      <HintPath>..\Client\bin\$(Configuration)\netstandard2.1\Himesamanoyume.MiyakoCarryServiceClient.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
+  <Target Name="CheckMcsClientAssembly" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('..\Client\bin\$(Configuration)\netstandard2.1\Himesamanoyume.MiyakoCarryServiceClient.dll')" Text="未找到 Client 构建产物（Configuration: $(Configuration)），请先构建 Client/MiyakoCarryServiceClient.sln 的对应配置。" />
+  </Target>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">  
     <!-- Debug 构建 -->
     <Exec Command="if exist &quot;$(DevGamePluginsMcsPath)\$(TargetFileName)&quot; del /f /q &quot;$(DevGamePluginsMcsPath)\$(TargetFileName)&quot;" Condition="'$(Configuration)' == 'Debug'" />

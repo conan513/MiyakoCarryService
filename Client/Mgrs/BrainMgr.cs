@@ -14,7 +14,7 @@ namespace MiyakoCarryService.Client.Mgrs
 {
     internal class BrainMgr : BaseMgr
     {
-        private McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
+        private McsMgr McsMgr => field ??= MgrAccessor.Get<McsMgr>();
         
         public override void Start()
         {
@@ -133,7 +133,7 @@ namespace MiyakoCarryService.Client.Mgrs
                             continue;
                         }
 
-                        LayerUtils.McsRestoreLayers(mcsBotPlayer.AIData.BotOwner, Classification.RemoveLayerNames);
+                        LayerUtils.McsRestoreAllExcludedLayers(mcsBotPlayer.AIData.BotOwner);
 
                         var customLayerMaps = LayerUtils.GetCustomLayerMaps();
                         if (customLayerMaps != null)
@@ -153,7 +153,7 @@ namespace MiyakoCarryService.Client.Mgrs
 
         public void InjectLayers(BaseBrain baseBrain)
         {
-            LayerUtils.McsRemoveLayers(baseBrain._owner, Classification.RemoveLayerNames);
+            LayerUtils.McsRemoveNonKeepLayers(baseBrain._owner, Classification.KeepLayerNames);
 
             var customLayerMaps = LayerUtils.GetCustomLayerMaps();
             foreach ((var customLayerType, var priority) in customLayerMaps)

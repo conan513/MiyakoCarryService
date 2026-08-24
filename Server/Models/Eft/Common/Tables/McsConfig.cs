@@ -90,6 +90,57 @@ namespace MiyakoCarryService.Server.Models.Eft.Common.Tables
             { 4, new () { Min = 28500, Max = 28500} },
             { 5, new () { Min = 30000, Max = 30000} }
         };
+
+        [JsonPropertyName("TraderLlmEnabled")]
+        public bool TraderLlmEnabled { get; set; } = false;
+
+        [JsonPropertyName("TraderLlmStartupTest")]
+        public bool TraderLlmStartupTest { get; set; } = true;
+
+        [JsonPropertyName("TraderLlmProvider")]
+        public string TraderLlmProvider { get; set; } = "OpenAICompatible";
+
+        [JsonPropertyName("TraderLlmApiKey")]
+        public string TraderLlmApiKey { get; set; } = "";
+
+        [JsonPropertyName("TraderLlmApiSecret")]
+        public string TraderLlmApiSecret { get; set; } = "";
+
+        [JsonPropertyName("TraderLlmBaseUrl")]
+        public string TraderLlmBaseUrl { get; set; } = "";
+
+        [JsonPropertyName("TraderLlmModelId")]
+        public string TraderLlmModelId { get; set; } = "deepseek-v4-flash";
+
+        [JsonPropertyName("TraderLlmSystemPrompt")]
+        public string TraderLlmSystemPrompt { get; set; } = "";
+
+        [JsonPropertyName("TraderLlmTemperature")]
+        public double TraderLlmTemperature { get; set; } = 0.2;
+
+        [JsonPropertyName("TraderLlmMaxTokens")]
+        public int TraderLlmMaxTokens { get; set; } = 8192;
+
+        [JsonPropertyName("TraderLlmTimeoutSec")]
+        public int TraderLlmTimeoutSec { get; set; } = 15;
+
+        [JsonPropertyName("TraderLlmReasoningEffort")]
+        public string TraderLlmReasoningEffort { get; set; } = "none";
+
+        [JsonPropertyName("TraderLlmMaxMessagesPerMinute")]
+        public int TraderLlmMaxMessagesPerMinute { get; set; } = 10;
+
+        [JsonPropertyName("TraderLlmMaxConcurrent")]
+        public int TraderLlmMaxConcurrent { get; set; } = 16;
+
+        [JsonPropertyName("TraderLlmMaxHistoryMessages")]
+        public int TraderLlmMaxHistoryMessages { get; set; } = 20;
+
+        [JsonPropertyName("HttpProxyHost")]
+        public string HttpProxyHost { get; set; } = "";
+
+        [JsonPropertyName("HttpProxyPort")]
+        public string HttpProxyPort { get; set; } = "";
     }
 
     public record McsPluginConfig

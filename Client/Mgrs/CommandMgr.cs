@@ -54,9 +54,9 @@ namespace MiyakoCarryService.Client.Mgrs
 #endif
         }
 
-        private McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
-        private LootDataMgr LootDataMgr => MgrAccessor.Get<LootDataMgr>();
-        private FormationDataMgr FormationDataMgr => MgrAccessor.Get<FormationDataMgr>();
+        private McsMgr McsMgr => field ??= MgrAccessor.Get<McsMgr>();
+        private LootDataMgr LootDataMgr => field ??= MgrAccessor.Get<LootDataMgr>();
+        private FormationDataMgr FormationDataMgr => field ??= MgrAccessor.Get<FormationDataMgr>();
 
         public override void OnRaidStarted()
         {
@@ -128,6 +128,65 @@ namespace MiyakoCarryService.Client.Mgrs
 
             // 不打算对根菜单进行扩展
             // CommandUtils.Apply(EMenuId.Main.ToString(), menu, mcsBotPlayers);
+        }
+
+        /// <summary>
+        /// 供语音管线枚举"代理/护送"类菜单选项（与玩家手动打开的子菜单一一对应）。
+        /// 递归展开代理（开关/任务/固定武器）与护送（撤离/传送/开关/固定武器等）子菜单，
+        /// 收集可执行且带目标数据的条目。选项顺序在单局内稳定，可用 1-based 序号引用。
+        /// </summary>
+        public virtual List<VoiceMenuOption> GetVoiceProxyEscortOptions(Player[] members)
+        {
+            var options = new List<VoiceMenuOption>();
+            if (members == null || members.Length == 0)
+            {
+                return options;
+            }
+
+            var menu = new McsCommandMenu();
+            BuildProxyMenu(menu, members, false);
+            BuildEscortMenu(menu, members, false);
+            CollectVoiceOptions(menu, options);
+            return options;
+        }
+
+        private void CollectVoiceOptions(McsCommandMenu menu, List<VoiceMenuOption> options)
+        {
+            foreach (var entry in menu.Entries)
+            {
+                if (entry.IsSubMenu)
+                {
+                    var sub = new McsCommandMenu();
+                    entry.BuildSubMenu(sub);
+                    CollectVoiceOptions(sub, options);
+                }
+                else if (IsVoiceOptionCommand(entry.CommandType) && !entry.Disabled)
+                {
+                    McsCommandContext ctx = null;
+                    try
+                    {
+                        ctx = entry.Resolver?.Invoke();
+                    }
+                    catch
+                    {
+                        // 单个选项解析失败不阻塞其余选项
+                    }
+                    options.Add(new VoiceMenuOption
+                    {
+                        Name = entry.Name,
+                        TargetName = entry.TargetName,
+                        CommandType = entry.CommandType,
+                        Position = ctx?.Position,
+                        TargetId = ctx?.TargetId,
+                    });
+                }
+            }
+        }
+
+        private static bool IsVoiceOptionCommand(string commandType)
+        {
+            return commandType is "InteractionProxyAction" or "QuestProxyAction"
+                or "StationaryWeaponProxyAction" or "EscortWorld";
         }
 
         public virtual void BuildTeamMenu(McsCommandMenu menu, Player[] mcsBotPlayers, bool isTeam)
@@ -566,7 +625,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldQuestProxyAction);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldQuestProxyAction);
                 mcsBotPlayerData.ProxyTargetId = ctx.TargetId;
                 mcsBotPlayerData.TargetPos = ctx.Position;
                 mcsBotPlayerData.IsLooting = false;
@@ -595,7 +654,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldEscort);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldEscort);
                 mcsBotPlayerData.TargetPos = ctx.Position;
                 mcsBotPlayerData.IsLooting = false;
             }
@@ -682,7 +741,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldKeepFormation]);
+                mcsBotPlayerData.SetIntent([Intents.ShouldKeepFormation]);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -701,7 +760,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldKeepFormation, Decisions.ShouldFollowMe]);
+                mcsBotPlayerData.SetIntent([Intents.ShouldKeepFormation, Intents.ShouldFollowMe]);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -720,7 +779,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldKeepFormation], Decisions.ShouldFollowMe);
+                mcsBotPlayerData.SetIntent([Intents.ShouldKeepFormation], Intents.ShouldFollowMe);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -748,7 +807,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldEscortToBtr);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldEscortToBtr);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -801,7 +860,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldGoToPoint);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldGoToPoint);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = pos.Value;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -818,7 +877,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldHoldPosition);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldHoldPosition);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -839,7 +898,7 @@ namespace MiyakoCarryService.Client.Mgrs
                 var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
                 if (mcsBotPlayerData != null)
                 {
-                    mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldDropTargetLoot);
+                    mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldDropTargetLoot);
                     mcsBotPlayerData.IsLooting = false;
                     mcsBotPlayerData.TargetPos = null;
                     mcsBotPlayerData.ProxyTargetId = null;
@@ -874,7 +933,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldKeepFormation], Decisions.ShouldTeleport);
+                mcsBotPlayerData.SetIntent([Intents.ShouldKeepFormation], Intents.ShouldTeleport);
                 mcsBotPlayerData.IsLooting = false;
                 mcsBotPlayerData.TargetPos = null;
                 mcsBotPlayerData.ProxyTargetId = null;
@@ -913,7 +972,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldInteractionProxyAction);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldInteractionProxyAction);
                 var interactableObjectData = Singleton<GameWorld>.Instance.FindInteractableObjectData(ctx.TargetId);
                 if (interactableObjectData != null)
                 {
@@ -957,7 +1016,7 @@ namespace MiyakoCarryService.Client.Mgrs
 
             var lootData = LootDataMgr.FindLootData(ctx.TargetId);
             mcsBotPlayerData.IsLooting = false;
-            mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldLootProxyAction);
+            mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldLootProxyAction);
             LootDataMgr.UnlockLootingTarget(lootData);
             LootDataMgr.UnlockLootingTargetRootTransform(lootData.RootTransform);
             if (!LootDataMgr.IsLockedLootingTarget(lootData) && !LootDataMgr.IsLockedLootingTargetRootTransform(lootData.RootTransform))
@@ -980,7 +1039,7 @@ namespace MiyakoCarryService.Client.Mgrs
                     PhraseTrigger = EPhraseTrigger.Negative,
                     Keys = botOwner.Memory.HaveEnemy ? [Locales.ONFIGHT] : null
                 });
-                mcsBotPlayerData.RemoveDecision(Decisions.ShouldLootProxyAction);
+                mcsBotPlayerData.RemoveIntent(Intents.ShouldLootProxyAction);
                 mcsBotPlayerData.ProxyTargetId = null;
                 mcsBotPlayerData.TargetPos = null;
             }
@@ -1014,7 +1073,7 @@ namespace MiyakoCarryService.Client.Mgrs
                 return;
             }
 
-            mcsBotPlayerData.SetDecision([Decisions.ShouldKeepFormation], Decisions.ShouldExfil);
+            mcsBotPlayerData.SetIntent([Intents.ShouldKeepFormation], Intents.ShouldExfil);
         }
 
         public virtual void ClearAreaCommandAction(McsCommandContext ctx)
@@ -1110,7 +1169,7 @@ namespace MiyakoCarryService.Client.Mgrs
             mcsBotPlayerData.TargetPos = seg[0];
             mcsBotPlayerData.IsLooting = false;
             mcsBotPlayerData.ProxyTargetId = null;
-            mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldClearArea);
+            mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldClearArea);
             botOwner.Mover._lastTimePosChanged = Time.time;
             botOwner.StopMove();
         }
@@ -1124,7 +1183,7 @@ namespace MiyakoCarryService.Client.Mgrs
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData != null)
             {
-                mcsBotPlayerData.SetDecision([Decisions.ShouldFollowMe, Decisions.ShouldKeepFormation], Decisions.ShouldStationaryWeaponProxyAction);
+                mcsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldStationaryWeaponProxyAction);
                 var interactableObjectData = Singleton<GameWorld>.Instance.FindInteractableObjectData(ctx.TargetId);
                 if (interactableObjectData != null)
                 {

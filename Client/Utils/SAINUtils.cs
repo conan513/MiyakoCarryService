@@ -19,7 +19,7 @@ namespace MiyakoCarryService.Client.Utils
         public const float ExitSainDist = 52f;
         public const float EnterSainSqr = EnterSainDist * EnterSainDist;
         public const float ExitSainSqr = ExitSainDist * ExitSainDist;
-        private static McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
+        private static McsMgr McsMgr => field ??= MgrAccessor.Get<McsMgr>();
 
         public static readonly Type PlayerComponentType = Type.GetType("SAIN.Components.PlayerComponent, SAIN");
         public static readonly Type SainMoverType = Type.GetType("SAIN.SAINComponent.Classes.Mover.SAINMoverClass, SAIN");
@@ -330,7 +330,7 @@ namespace MiyakoCarryService.Client.Utils
             {
                 return false;
             }
-            return mcsBotPlayerData.HasDecision(Decisions.ShouldHoldPosition) || mcsBotPlayerData.HasDecision(Decisions.ShouldKeepFormation) || mcsBotPlayerData.HasDecision(Decisions.ShouldFollowMe);
+            return mcsBotPlayerData.HasIntent(Intents.ShouldHoldPosition) || mcsBotPlayerData.HasIntent(Intents.ShouldKeepFormation) || mcsBotPlayerData.HasIntent(Intents.ShouldFollowMe);
         }
 
         public static bool ShouldRedirect(BotOwner botOwner, out McsBotPlayerData mcsBotPlayerData)
@@ -345,7 +345,7 @@ namespace MiyakoCarryService.Client.Utils
             {
                 return false;
             }
-            return mcsBotPlayerData.HasDecision(Decisions.ShouldFollowMe) || mcsBotPlayerData.HasDecision(Decisions.ShouldKeepFormation);
+            return mcsBotPlayerData.HasIntent(Intents.ShouldFollowMe) || mcsBotPlayerData.HasIntent(Intents.ShouldKeepFormation);
         }
 
         public static bool TryGetMoveTarget(BotOwner botOwner, McsBotPlayerData mcsBotPlayerData, out Vector3 target)
@@ -355,7 +355,7 @@ namespace MiyakoCarryService.Client.Utils
             var mcsBotPlayerConfig = mcsBotPlayerData.McsAILeadPlayer?.McsBotPlayerConfig;
             var mcsLeadPlayer = mcsBotPlayerData.LeadPlayer;
 
-            if (mcsBotPlayerData.HasDecision(Decisions.ShouldKeepFormation) && mcsBotPlayerConfig != null && mcsBotPlayerConfig.EnableKeepFormation && mcsLeadPlayer != null)
+            if (mcsBotPlayerData.HasIntent(Intents.ShouldKeepFormation) && mcsBotPlayerConfig != null && mcsBotPlayerConfig.EnableKeepFormation && mcsLeadPlayer != null)
             {
                 var botIndex = Tools.GetMcsBotPlayerIndex(botOwner.ProfileId, mcsBotPlayerConfig.FormationSequentialFill);
                 if (botIndex >= 5)

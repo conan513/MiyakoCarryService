@@ -24,7 +24,7 @@ namespace MiyakoCarryService.Client.Datas
         public Condition QuestParentCondition => _parentConditionRef != null ? _parentConditionRef.TryGetTarget(out var parentCondition) ? parentCondition : null : null;
         private WeakReference<Transform> _transformRef;
         private Transform _questTransform => _transformRef.TryGetTarget(out var transform) ? transform : null;
-        private QuestDataMgr QuestDataMgr => MgrAccessor.Get<QuestDataMgr>();
+        private QuestDataMgr QuestDataMgr => field ??= MgrAccessor.Get<QuestDataMgr>();
 
         public QuestData(QuestDataClass quest, Transform questTransform, Condition condition, Condition parentCondition = null) : base()
         {
@@ -66,7 +66,7 @@ namespace MiyakoCarryService.Client.Datas
                 var mcsBotPlayerData = mcsBotPlayer.AIData.BotOwner.GetMcsBotPlayerData();
                 if (mcsBotPlayerData != null)
                 {
-                    mcsBotPlayerData.RemoveDecision([Decisions.ShouldInteractionProxyAction, Decisions.ShouldQuestProxyAction, Decisions.ShouldLootProxyAction, Decisions.ShouldHoldPosition]);
+                    mcsBotPlayerData.RemoveIntent([Intents.ShouldInteractionProxyAction, Intents.ShouldQuestProxyAction, Intents.ShouldLootProxyAction, Intents.ShouldHoldPosition]);
                     mcsBotPlayerData.TargetPos = null;
                     mcsBotPlayerData.ProxyTargetId = null;
                 }

@@ -15,7 +15,7 @@ namespace MiyakoCarryService.Client.Patches.Bots
     {
         protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(EnemyPart), nameof(EnemyPart.CheckCanShoot));
 
-        private static McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
+        private static McsMgr McsMgr => field ??= MgrAccessor.Get<McsMgr>();
 
         [PatchPostfix]
         public static void Postfix(EnemyPart __instance, BotOwner botOwner, EnemyPartVision partVision, bool checkOnlyIfVisible = true)
@@ -31,7 +31,7 @@ namespace MiyakoCarryService.Client.Patches.Bots
             }
 
             var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
-            if (mcsBotPlayerData == null || !mcsBotPlayerData.HasDecision(Decisions.ShouldUseStationaryWeapon))
+            if (mcsBotPlayerData == null || !mcsBotPlayerData.HasIntent(Intents.ShouldUseStationaryWeapon))
             {
                 return;
             }

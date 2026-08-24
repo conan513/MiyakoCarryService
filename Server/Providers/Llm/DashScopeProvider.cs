@@ -1,0 +1,96 @@
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using MiyakoCarryService.Server.Models.Llm;
+using MiyakoCarryService.Server.Models.Providers;
+using MiyakoCarryService.Server.Utils;
+using SPTarkov.DI.Annotations;
+using SPTarkov.Server.Core.Services.Locales;
+
+namespace MiyakoCarryService.Server.Providers.Llm
+{
+    [Injectable(InjectionType.Singleton)]
+    public sealed class DashScopeProvider : BaseLlmProvider
+    {
+        public DashScopeProvider(ServerLocalisationService serverLocalisation) : base(serverLocalisation)
+        {
+        }
+
+        protected override string ProviderDisplayName => _serverLocalisationService.GetText(Locales.LLMPROVIDERDASHSCOPE);
+
+        private const string DefaultBaseUrl = "https://dashscope.aliyuncs.com";
+        private const string DefaultModel = "qwen-plus";
+
+        public override async Task<LlmIntent> InterpretAsync(string userText, LlmProviderSettings settings, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(userText))
+            {
+                return new LlmIntent { Error = _serverLocalisationService.GetText(Locales.LLM_USER_TEXT_EMPTY) };
+            }
+            if (string.IsNullOrEmpty(settings?.ApiKey))
+            {
+                return new LlmIntent { Error = _serverLocalisationService.GetText(Locales.LLM_APIKEY_MISSING, new { ProviderKey = "DashScope API Key" }) };
+            }
+
+            var baseUrl = string.IsNullOrEmpty(settings.BaseUrl) ? DefaultBaseUrl : settings.BaseUrl.TrimEnd('/');
+            var model = string.IsNullOrEmpty(settings.ModelId) ? DefaultModel : settings.ModelId;
+
+            var body = new DashScopeGenerationRequest
+            {
+                Model = model,
+                Input = new DashScopeInput
+                {
+                    Messages =
+                    [
+                        new OpenAiChatMessage { Role = "system", Content = settings.SystemPrompt ?? "" },
+                        new OpenAiChatMessage { Role = "user", Content = userText },
+                    ],
+                },
+                Parameters = new DashScopeParameters
+                {
+                    Temperature = settings.Temperature,
+                    MaxTokens = settings.MaxTokens > 0 ? settings.MaxTokens : 10107,
+                },
+            };
+            ApplyDashScopeThinking(body, settings.ReasoningEffort);
+
+            var result = await PostJsonAsync($"{baseUrl}/api/v1/services/aigc/text-generation/generation", body, settings, cancellationToken,
+                request => request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey));
+            if (!result.IsSuccess)
+            {
+                return new LlmIntent { Error = result.Error };
+            }
+
+            var content = ExtractText(result.ResponseText);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return new LlmIntent { Error = _serverLocalisationService.GetText(Locales.LLM_EMPTY_CONTENT, new { ProviderName = ProviderDisplayName }) };
+            }
+            return ParseIntentJson(content);
+        }
+
+        private void ApplyDashScopeThinking(DashScopeGenerationRequest request, string reasoningEffort)
+        {
+            if (string.IsNullOrEmpty(reasoningEffort) || reasoningEffort == "default")
+            {
+                return;
+            }
+
+            request.Parameters.EnableThinking = reasoningEffort != "none";
+        }
+
+        public override string ExtractText(string responseString)
+        {
+            try
+            {
+                var response = JsonSerializer.Deserialize<DashScopeGenerationResponse>(responseString);
+                return response?.Output?.Text;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+}

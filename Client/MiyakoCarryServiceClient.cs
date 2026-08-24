@@ -34,7 +34,7 @@ namespace MiyakoCarryService.Client
     [BepInDependency(BigBrainGUID, BepInDependency.DependencyFlags.HardDependency)]
     public sealed class MiyakoCarryServicePlugin : BaseUnityPlugin
     {
-        public const string BepInExClientVersion = "1.1.0.2";
+        public const string BepInExClientVersion = "1.1.1.0";
         public static System.Version ClientVersion { get; } = new(BepInExClientVersion);
         public const string EFTapp = "EscapeFromTarkov.exe";
         public const string McsGUID = "top.himesamanoyume.miyakocarryservice";
@@ -197,7 +197,7 @@ namespace MiyakoCarryService.Client
             _patches.Add(new MenuTaskBarAwakePatch());
             _patches.Add(new NewNewsCountPatch());
             _patches.Add(new SetGoalEnemyPatch());
-            _patches.Add(new ChatSendMessagePatch());
+            _patches.Add(new MessageReceivedHandlerPatch());
             _patches.Add(new LocalQuestControllerClassPatch());
             _patches.Add(new GetContextInteractionsPatch());
             _patches.Add(new ContextInteractionsClassPatch());

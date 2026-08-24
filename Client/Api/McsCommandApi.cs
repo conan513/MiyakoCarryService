@@ -1,8 +1,10 @@
 
 
 using System;
+using System.Collections.Generic;
 using EFT;
 using EFT.UI;
+using MiyakoCarryService.Client.Mgrs;
 using MiyakoCarryService.Client.Models;
 using MiyakoCarryService.Client.Utils;
 
@@ -101,6 +103,43 @@ namespace MiyakoCarryService.Client.Api
         public static Player[] GetAliveMembers()
         {
             return CommandUtils.GetAliveMembers();
+        }
+
+        /// <summary>
+        /// 枚举当前战局"代理/护送"类指令菜单选项（含本地化名称与距离提示），供语音管线注入 LLM 提示词。
+        /// 战局外或失败时返回空列表。
+        /// </summary>
+        public static List<VoiceMenuOption> GetVoiceMenuOptions()
+        {
+            try
+            {
+                var mgr = MgrAccessor.Get<CommandMgr>();
+                if (mgr == null)
+                {
+                    return new List<VoiceMenuOption>();
+                }
+                return mgr.GetVoiceProxyEscortOptions(CommandUtils.GetAliveMembers());
+            }
+            catch
+            {
+                return new List<VoiceMenuOption>();
+            }
+        }
+
+        /// <summary>
+        /// 取护航成员的权威编号（与玩家所见 RabbitN 一致，由 <see cref="McsMgr.GetMcsBotPlayerIndex"/> 计算）。
+        /// 语音"N号"按此编号匹配护航，避免与存活列表位置错位。
+        /// </summary>
+        public static int GetMcsBotPlayerIndex(Player member)
+        {
+            try
+            {
+                return MgrAccessor.Get<McsMgr>().GetMcsBotPlayerIndex(member?.ProfileId, false);
+            }
+            catch
+            {
+                return -5;
+            }
         }
         
         public static void Execute(McsCommandContext ctx, bool shouldCheckData)

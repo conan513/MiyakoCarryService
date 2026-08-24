@@ -3,7 +3,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MiyakoCarryService.Server.Controllers;
-using MiyakoCarryService.Server.Interface;
+using MiyakoCarryService.Server.Interfaces;
 using MiyakoCarryService.Server.Services;
 using MiyakoCarryService.Server.Utils;
 using SPTarkov.DI.Annotations;
@@ -41,16 +41,11 @@ namespace MiyakoCarryService.Server.ChatBot.Commands
             get
             {
                 return [
-                    string.Format(
-                        serverLocalisationService.GetText(Locales.MIYAKOTRADERTICKETCOMMANDHELP1), 
-                        Command, 
-                        Command, 
-                        Command
-                        ), 
-                    string.Format(
-                        serverLocalisationService.GetText(Locales.MIYAKOTRADERTICKETCOMMANDHELP2), 
-                        configService.GetMcsPluginConfig().ServerConfig.TicketPricePerPercent
-                )];
+                    serverLocalisationService.GetText(Locales.MIYAKOTRADERTICKETCOMMANDHELP1, new { Command = Command }),
+                    serverLocalisationService.GetText(Locales.MIYAKOTRADERTICKETCOMMANDHELP2, new
+                    {
+                        PricePerPercent = configService.GetMcsPluginConfig().ServerConfig.TicketPricePerPercent
+                    })];
             }
         }
 

@@ -53,9 +53,20 @@ namespace MiyakoCarryService.Server.Patches.Dialogue
                     sessionId,
                     TraderService.MiyakoTraderId,
                     MessageType.NpcTraderMessage,
-                    string.Format(_serverLocalisationService.GetText(Locales.CURRENTPRICEINCREASE), Math.Round(_traderService.GetGlobalPunishmentMulti() * 100d, 2)),
+                    _serverLocalisationService.GetText(Locales.CURRENTPRICEINCREASE, new { Percent = Math.Round(_traderService.GetGlobalPunishmentMulti() * 100d, 2) }),
                     null
                 );
+
+                if (_configService.GetMcsPluginConfig().ServerConfig.TraderLlmEnabled)
+                {
+                    _mailSendService.SendLocalisedNpcMessageToPlayer(
+                        sessionId,
+                        TraderService.MiyakoTraderId,
+                        MessageType.NpcTraderMessage,
+                        Locales.MIYAKOTRADERLLMENABLED,
+                        null
+                    );
+                }
 
                 if (_configService.GetMcsPluginConfig().ServerConfig.CheckUpdate && _configService.HaveUpdate)
                 {
@@ -63,7 +74,7 @@ namespace MiyakoCarryService.Server.Patches.Dialogue
                         sessionId,
                         TraderService.MiyakoTraderId,
                         MessageType.NpcTraderMessage,
-                        string.Format(_serverLocalisationService.GetText(Locales.NEWVERSIONNOTIFY), _configService.GetClientVersion(), _configService.GetLatestVersion()),
+                        _serverLocalisationService.GetText(Locales.NEWVERSIONNOTIFY, new { CurrentVersion = _configService.GetClientVersion(), LatestVersion = _configService.GetLatestVersion() }),
                         null
                     );
                 }

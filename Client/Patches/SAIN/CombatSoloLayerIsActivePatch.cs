@@ -18,7 +18,7 @@ namespace MiyakoCarryService.Client.Patches.SAIN
     {
         protected override MethodBase GetTargetMethod() => AccessTools.Method(Type.GetType("SAIN.Layers.Combat.Solo.CombatSoloLayer, SAIN"), "IsActive");
 
-        private static McsMgr McsMgr => MgrAccessor.Get<McsMgr>();
+        private static McsMgr McsMgr => field ??= MgrAccessor.Get<McsMgr>();
 
         private sealed class HysteresisState
         {
@@ -40,7 +40,7 @@ namespace MiyakoCarryService.Client.Patches.SAIN
                 }
 
                 var state = _states.GetOrCreateValue(botOwner);
-                if (mcsBotPlayerData.HasDecision(Decisions.ShouldUseStationaryWeapon))
+                if (mcsBotPlayerData.HasIntent(Intents.ShouldUseStationaryWeapon))
                 {
                     state.SainAllowed = false;
                     __result = false;

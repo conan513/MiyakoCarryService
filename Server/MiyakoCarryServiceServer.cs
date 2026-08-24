@@ -11,6 +11,7 @@ using System.Threading;
 using SPTarkov.Common.Models.Logging;
 using SPTarkov.Server.Core.Services.Locales;
 using SPTarkov.Reflection.Patching;
+using MiyakoCarryService.Server.Services.Llm;
 
 namespace MiyakoCarryService.Server
 {
@@ -44,6 +45,7 @@ namespace MiyakoCarryService.Server
             CompatibilityService compatibilityService,
             ConfigService configService,
             InventoryService inventoryService,
+            LlmDispatcherService llmDispatcherService,
             ServerLocalisationService serverLocalisationService,
             ISptLogger<MiyakoCarryServiceServerPostLoad> logger,
             JsonUtil jsonUtil
@@ -74,6 +76,7 @@ namespace MiyakoCarryService.Server
                 });
                 _ = CheckForUpdate();
                 _ = CheckForIfdianUpdate();
+                _ = llmDispatcherService.TestConnectionAsync();
 
                 await Task.CompletedTask;
             }
@@ -144,7 +147,7 @@ namespace MiyakoCarryService.Server
                             if (latestVersion.CompareTo(currentVersion) > 0)
                             {
                                 configService.UpdateLatestVersion(latestVersion);
-                                logger.Success(string.Format(serverLocalisationService.GetText(Locales.NEWVERSIONNOTIFY), currentVersion, latestVersion));
+                                logger.Success(serverLocalisationService.GetText(Locales.NEWVERSIONNOTIFY, new { CurrentVersion = currentVersion, LatestVersion = latestVersion }));
                             }
                             break;
                         }
