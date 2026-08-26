@@ -70,13 +70,13 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
                 return;
             }
 
-            // Companion botoknak legalább 3 healing item garantálva (vest/backpack-be kerülnek)
-            var healingItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Healing.Weights), 3);
+            // Companion botoknak legalább 5 healing item garantálva (vest/backpack-be kerülnek)
+            var healingItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Healing.Weights), 5);
             var drugItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Drugs.Weights);
             var foodItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Food.Weights);
             var drinkItemCount = weightedRandomHelper.GetWeightedValue(itemCounts.Drink.Weights);
-            // Companion botoknak legalább 2 stim garantálva
-            var stimItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Stims.Weights), 2);
+            // Companion botoknak legalább 3 stim garantálva
+            var stimItemCount = Math.Max(weightedRandomHelper.GetWeightedValue(itemCounts.Stims.Weights), 3);
             var grenadeCount = weightedRandomHelper.GetWeightedValue(itemCounts.Grenades.Weights);
 
             // Mindig adjuk hozzá a PMC forced medical item-eket (config-tól függetlenül)
@@ -234,6 +234,9 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
             // AFAK kompakt kötszerkészlet (vérzés, seb)
             AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT, 2);
 
+            // IFAK (általános elsősegély - 590c657e86f77412b013051d)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, new MongoId("590c657e86f77412b013051d"), 1);
+
             // CAT hemostatikus érszorító (könnyű és nehéz vérzés megállítása)
             AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET, 2);
 
@@ -245,6 +248,9 @@ namespace MiyakoCarryService.Server.Generators.CustomGeneration
 
             // Alumínium sín (törések)
             AddItemsToCarrySlots(botId, botInventory, carrySlots, ItemTpl.MEDICAL_ALUMINUM_SPLINT, 2);
+
+            // Vaseline (seb fertőtlenítő, HP regeneráció - 5751a25924597722c463c472)
+            AddItemsToCarrySlots(botId, botInventory, carrySlots, new MongoId("5751a25924597722c463c472"), 1);
 
         }
 
