@@ -7,6 +7,8 @@ using EFT.Trading;
 using EFT.UI.DragAndDrop;
 using MiyakoCarryService.Client.Datas;
 using MiyakoCarryService.Client.Mgrs;
+using MiyakoCarryService.Client.Misc;
+using MiyakoCarryService.Client.Models;
 using MiyakoCarryService.Client.Utils;
 
 namespace MiyakoCarryService.Client.Extensions
@@ -86,10 +88,14 @@ namespace MiyakoCarryService.Client.Extensions
                     {
                         if (McsMgr.IsMcsBotPlayer(player.ProfileId))
                         {
-                            var McsLeadPlayer = McsMgr.GetMcsLeadPlayerByMcsBotPlayerId(player.ProfileId);
-                            playerData = new McsBotPlayerData(McsMgr.GetMcsLeadPlayerByMcsBotPlayerId(player.ProfileId), McsMgr.GetMcsAILeadPlayerByMcsLeadPlayerId(McsLeadPlayer.ProfileId), player, item);
-                            _datas.Add(item, playerData);
-                            return playerData;
+                            var mcsLeadPlayer = McsMgr.GetMcsLeadPlayerByMcsBotPlayerId(player.ProfileId) ?? Singleton<GameWorld>.Instance?.MainPlayer;
+                            if (mcsLeadPlayer != null)
+                            {
+                                var aiLead = McsMgr.GetMcsAILeadPlayerByMcsLeadPlayerId(mcsLeadPlayer.ProfileId) ?? new McsAILeadPlayer(mcsLeadPlayer);
+                                playerData = new McsBotPlayerData(mcsLeadPlayer, aiLead, player, item);
+                                _datas.Add(item, playerData);
+                                return playerData;
+                            }
                         }
                     }
                     playerData = new PlayerData(player, item);

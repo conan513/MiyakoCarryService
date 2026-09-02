@@ -19,7 +19,7 @@ namespace MiyakoCarryService.Client.Datas
         public BotOwner BotOwner => _botOwnerRef.TryGetTarget(out var botOwner) ? botOwner : null;
         private WeakReference<Player> _leadPlayeRef;
         public Player LeadPlayer => _leadPlayeRef.TryGetTarget(out var leadPlayer) ? leadPlayer : null;
-        public GamePlayerOwner LeadPlayerGamePlayerOwner => McsAILeadPlayer.GamePlayerOwner;
+        public GamePlayerOwner LeadPlayerGamePlayerOwner => McsAILeadPlayer?.GamePlayerOwner;
         private WeakReference<McsAILeadPlayer> _mcsAILeadPlayerRef;
         public McsAILeadPlayer McsAILeadPlayer => _mcsAILeadPlayerRef.TryGetTarget(out var mcsAILeadPlayer) ? mcsAILeadPlayer : null;
         public BodyPartType AimingBodyPartType = BodyPartType.head;
@@ -121,7 +121,7 @@ namespace MiyakoCarryService.Client.Datas
             _mcsAILeadPlayerRef = new(mcsAILeadPlayer);
             _leadPlayeRef = new(bossPlayer);
             CollectVanishingCurseLootItems();
-            if (mcsAILeadPlayer.McsBotPlayerConfig.EnableKeepFormation)
+            if (mcsAILeadPlayer?.McsBotPlayerConfig?.EnableKeepFormation == true)
             {
                 AddIntent(Intents.ShouldKeepFormation);
             }

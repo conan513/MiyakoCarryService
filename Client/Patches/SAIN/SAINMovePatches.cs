@@ -87,18 +87,6 @@ namespace MiyakoCarryService.Client.Patches.SAIN
         [PatchPrefix]
         public static bool Prefix(object __instance, ref bool __result)
         {
-            if (!SAINUtils.IsMcsBotPlayer(__instance, SAINUtils.GetBotOwner))
-            {
-                return true;
-            }
-
-            var botOwner = SAINUtils.GetBotOwner(__instance);
-            if (SAINUtils.ShouldRedirect(botOwner, out _))
-            {
-                __result = false;
-                return false;
-            }
-
             return true;
         }
     }
@@ -113,18 +101,6 @@ namespace MiyakoCarryService.Client.Patches.SAIN
         [PatchPrefix]
         public static bool Prefix(object __instance, ref bool __result)
         {
-            if (!SAINUtils.IsMcsBotPlayer(__instance, SAINUtils.GetBotOwner))
-            {
-                return true;
-            }
-
-            var botOwner = SAINUtils.GetBotOwner(__instance);
-            if (SAINUtils.ShouldRedirect(botOwner, out _))
-            {
-                __result = false;
-                return false;
-            }
-
             return true;
         }
     }

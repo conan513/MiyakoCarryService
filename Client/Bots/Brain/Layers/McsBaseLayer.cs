@@ -1363,7 +1363,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                 return;
             }
 
-            if (_lastTargetPos.Value.McsSqrDistance(leadPos.Value) < LEAD_POSITION_CHANGE_THRESHOLD * LEAD_POSITION_CHANGE_THRESHOLD)
+            if (_lastTargetPos.HasValue && _lastTargetPos.Value.McsSqrDistance(leadPos.Value) < LEAD_POSITION_CHANGE_THRESHOLD * LEAD_POSITION_CHANGE_THRESHOLD)
             {
                 nextUpdateTime = 1f;
                 return;
@@ -1385,6 +1385,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
             }
 
             var newMoveTarget = GetPointAlongPathAtDistance(corners, 15f);
+            _lastTargetPos = leadPos;
             _currentMoveTarget = newMoveTarget;
             nextUpdateTime = 1f;
         }

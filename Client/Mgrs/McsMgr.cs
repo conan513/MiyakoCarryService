@@ -290,7 +290,7 @@ namespace MiyakoCarryService.Client.Mgrs
 
         public bool IsMcsBotPlayer(MongoID mcsBotPlayerId)
         {
-            return _allMcsBotPlayerIdInRaid.Contains(mcsBotPlayerId);
+            return _allMcsBotPlayerIdInRaid.Contains(mcsBotPlayerId) || _mcsSquadDict.Values.Any(s => s.ContainsKey(mcsBotPlayerId));
         }
 
         public bool IsMyMcsBotPlayer(MongoID mcsLeadPlayerId, MongoID mcsBotPlayerId)
@@ -323,16 +323,16 @@ namespace MiyakoCarryService.Client.Mgrs
         {
             if (!IsHost)
             {
-                throw new System.Exception("作为副机时不应使用此函数");
+                return Singleton<GameWorld>.Instance?.MainPlayer;
             }
             foreach (var mcsSquad in _mcsSquadDict)
             {
                 if (mcsSquad.Value.ContainsKey(mcsBotPlayerId))
                 {
-                    return Singleton<GameWorld>.Instance.GetEverExistedPlayerByID(mcsSquad.Key);
+                    return Singleton<GameWorld>.Instance?.GetEverExistedPlayerByID(mcsSquad.Key) ?? Singleton<GameWorld>.Instance?.MainPlayer;
                 }
             }
-            return null;
+            return Singleton<GameWorld>.Instance?.MainPlayer;
         }
 
         public McsAILeadPlayer GetMcsAILeadPlayerByMcsLeadPlayerId(MongoID mcsLeadPlayerId)
@@ -464,6 +464,11 @@ namespace MiyakoCarryService.Client.Mgrs
 
         public void AddPunish(MongoID friendlyFirePlayerId, double diff, bool teamKill, bool punishEveryone, MongoID? victimBotId = null)
         {
+            if (_friendlyFireDebouncer == null)
+            {
+                return;
+            }
+
             var penalty = new FriendlyFirePenalty
             {
                 FriendlyFirePlayerId = friendlyFirePlayerId,
@@ -580,10 +585,14 @@ namespace MiyakoCarryService.Client.Mgrs
 
         private async Task RequestAllMcsBotPlayerIdInRaid()
         {
-            _allMcsBotPlayerIdInRaid = await McsRequestHandler.GetAllMcsBotPlayerIdInRaid(new()
+            var ids = await McsRequestHandler.GetAllMcsBotPlayerIdInRaid(new()
             {
                 Side = MatchmakerAcceptScreenShowPatch.CurrentType
             });
+            if (ids != null)
+            {
+                _allMcsBotPlayerIdInRaid.UnionWith(ids);
+            }
         }
 
         public override void OnRaidEnded()

@@ -25,29 +25,54 @@ namespace MiyakoCarryService.Client.Bots.Brain.Logics
             }
 
             var leadPlayer = mcsBotPlayerData.LeadPlayer;
+            if (leadPlayer == null)
+            {
+                BotOwner.Sprint(true, false);
+                _baseLogic.UpdateNodeByMain(data);
+                return;
+            }
+
             var botToLeaderSqrDistance = BotOwner.Position.McsSqrDistance(leadPlayer.Position);
             BotOwner.Steering.LookToMovingDirection();
             var leaderMovementContext = leadPlayer.MovementContext;
             var botWithin50 = botToLeaderSqrDistance < 50f * 50f;
-            var leaderRelativeSpeed = leaderMovementContext.MaxSpeed > 0f ? leaderMovementContext.CharacterMovementSpeed / leaderMovementContext.MaxSpeed : 0f;
+            var isCloseToLead = botToLeaderSqrDistance <= 4f * 4f;
 
-            if (!BotOwner.Memory.HaveEnemy && botWithin50 && leaderMovementContext.IsInPronePose)
+            if (!BotOwner.Memory.HaveEnemy && botWithin50 && leaderMovementContext != null)
             {
                 _baseLogic.DoorOpen();
-                BotOwner.BotLight?.TurnOff(false, true);
-                BotOwner.GoToSomePointData.UpdateToGo(false, 0f, leaderMovementContext.PoseLevel);
-            }
-            else if (!BotOwner.Memory.HaveEnemy && botWithin50 && (leaderMovementContext.PoseLevel < 1f || leaderMovementContext.PoseLevel == 1f && leaderRelativeSpeed < 1f))
-            {
-                _baseLogic.DoorOpen();
-                BotOwner.BotLight?.TurnOff(false, true);
-                BotOwner.GoToSomePointData.UpdateToGo(false, leaderMovementContext.CharacterMovementSpeed, leaderMovementContext.PoseLevel);
+                if (leaderMovementContext.IsInPronePose)
+                {
+                    BotOwner.BotLight?.TurnOff(false, true);
+                    BotOwner.SetPose(0f);
+                    BotOwner.SetTargetMoveSpeed(isCloseToLead ? 0f : 0.5f);
+                }
+                else if (leaderMovementContext.PoseLevel < 1f)
+                {
+                    BotOwner.BotLight?.TurnOff(false, true);
+                    BotOwner.SetPose(leaderMovementContext.PoseLevel);
+                    BotOwner.SetTargetMoveSpeed(isCloseToLead ? leaderMovementContext.CharacterMovementSpeed : 1f);
+                }
+                else
+                {
+                    BotOwner.SetPose(1f);
+                    if (botToLeaderSqrDistance > 15f * 15f)
+                    {
+                        BotOwner.Sprint(true, false);
+                    }
+                    else
+                    {
+                        BotOwner.Sprint(false, false);
+                        BotOwner.SetTargetMoveSpeed(isCloseToLead ? leaderMovementContext.CharacterMovementSpeed : 1f);
+                    }
+                }
             }
             else
             {
                 BotOwner.Sprint(true, false);
-                _baseLogic.UpdateNodeByMain(data);
             }
+
+            _baseLogic.UpdateNodeByMain(data);
         }
     }
 }
