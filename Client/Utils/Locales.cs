@@ -5,6 +5,7 @@ namespace MiyakoCarryService.Client.Utils
         public const string BASIC = "Mcs/A.Basic";
         public const string COMMAND = "Mcs/B.Command";
         public const string PLAYER = "Mcs/C.Player";
+        public const string EXPERIMENTAL = "Mcs/Y.Experimental";
         public const string DEBUG = "Mcs/Z.Debug";
         public const string ENABLELOOTING_KEY = "Mcs/EnableLooting Key";
         public const string ENABLELOOTING_DESCRIPTION = "Mcs/EnableLooting Description";
@@ -221,6 +222,8 @@ namespace MiyakoCarryService.Client.Utils
         public const string CHANGEFORMATIONCOMMAND_TARGETNAME = "Mcs/ChangeFormationCommand TargetName";
         public const string SHOWBREVITYCODE_KEY = "Mcs/ShowBrevityCode Key";
         public const string SHOWBREVITYCODE_DESCRIPTION = "Mcs/ShowBrevityCode Description";
+        public const string PHRASESSILENT_KEY = "Mcs/PhrasesSilent Key";
+        public const string PHRASESSILENT_DESCRIPTION = "Mcs/PhrasesSilent Description";
         public const string TEAMSTATIONARYWEAPONESCORTCOMMAND_NAME = "Mcs/TeamStationaryWeaponEscortCommand Name";
         public const string TEAMSTATIONARYWEAPONESCORTCOMMAND_TARGETNAME = "Mcs/TeamStationaryWeaponEscortCommand TargetName";
         public const string STATIONARYWEAPONESCORTCOMMAND_NAME = "Mcs/StationaryWeaponEscortCommand Name";

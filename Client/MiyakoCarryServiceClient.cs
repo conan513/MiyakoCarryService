@@ -1,6 +1,5 @@
 using BepInEx;
 using BepInEx.Configuration;
-using BepInEx.Logging;
 using UnityEngine;
 using System.Collections.Generic;
 using System;
@@ -34,7 +33,7 @@ namespace MiyakoCarryService.Client
     [BepInDependency(BigBrainGUID, BepInDependency.DependencyFlags.HardDependency)]
     public sealed class MiyakoCarryServicePlugin : BaseUnityPlugin
     {
-        public const string BepInExClientVersion = "1.1.1.0";
+        public const string BepInExClientVersion = "1.1.3.1";
         public static System.Version ClientVersion { get; } = new(BepInExClientVersion);
         public const string EFTapp = "EscapeFromTarkov.exe";
         public const string McsGUID = "top.himesamanoyume.miyakocarryservice";
@@ -50,7 +49,6 @@ namespace MiyakoCarryService.Client
         public static McsPluginClientConfig McsPluginClientConfig = null;
         private List<ModulePatch> _patches = new();
         public static bool IsLoadedByScriptEngine = false;
-        public static new readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("MiyakoCarryService");
         public static bool FikaInstalled { get; private set; } = false;
         public static bool IsFikaHeadless { get; private set; } = false;
         public static bool SAINInstalled { get; private set; } = false;
@@ -73,6 +71,8 @@ namespace MiyakoCarryService.Client
         public static ConfigEntry<bool> FormationSequentialFill;
         public static ConfigEntry<KeyboardShortcut> SaveFormationPresetHotKey;
         public static ConfigEntry<string> FormationPresets;
+        public static ConfigEntry<bool> PhrasesSilent;
+        public static ConfigEntry<bool> EnableSubtitles;
 
         #endregion
 
@@ -84,7 +84,9 @@ namespace MiyakoCarryService.Client
 
         #region PLAYER
 
-        public static ConfigEntry<bool> EnableSubtitles;
+        public static ConfigEntry<bool> TeammateHighlight;
+        public static ConfigEntry<KeyboardShortcut> TeammateHighlightHotKey;
+        public static ConfigEntry<Color> TeammateHighlightColor;
         public static ConfigEntry<bool> ShowBrevityCode;
 
         #endregion
@@ -248,6 +250,8 @@ namespace MiyakoCarryService.Client
             {
                 _patches.Add(new CombatSoloLayerStartPatch());
                 _patches.Add(new CombatSoloLayerIsActivePatch());
+                _patches.Add(new SAINActivationManualUpdatePatch());
+                _patches.Add(new SAINBotInfoInitPatch());
                 _patches.Add(new SetTargetMoveDirectionPatch());
                 _patches.Add(new DogFightMovePatch());
                 _patches.Add(new RunToPointPatch());
@@ -257,6 +261,7 @@ namespace MiyakoCarryService.Client
                 _patches.Add(new MoverManualUpdatePatch());
                 _patches.Add(new CalcGoalDropEnemyPatch());
                 _patches.Add(new CheckCanShootPatch());
+                _patches.Add(new SainPlayVoiceLinePatch());
             }
 
 #if DEBUG
@@ -359,6 +364,8 @@ namespace MiyakoCarryService.Client
                         EnableKeepFormation = EnableKeepFormation.Value,
                         FormationSpacing = FormationSpacing.Value,
                         FormationSequentialFill = FormationSequentialFill.Value,
+                        PhrasesSilent = PhrasesSilent.Value,
+                        EnableSubtitles = EnableSubtitles.Value,
                         Extensions = McsBotPlayerConfigUtils.Snapshot()
                     });
                 };
@@ -383,6 +390,7 @@ namespace MiyakoCarryService.Client
                 EConfigType.BASIC => Locales.BASIC,
                 EConfigType.COMMAND => Locales.COMMAND,
                 EConfigType.PLAYER => Locales.PLAYER,
+                EConfigType.EXPERIMENTAL => Locales.EXPERIMENTAL,
                 EConfigType.DEBUG or _ => Locales.DEBUG
             };
             return Register(configTypeText, (int)type, key, defaultValue, description, acceptableValues, customAttributes, needNotify, isHide);
@@ -508,6 +516,19 @@ namespace MiyakoCarryService.Client
                 new KeyboardShortcut()
             );
 
+            PhrasesSilent = Register(
+                EConfigType.BASIC,
+                Locales.PHRASESSILENT_KEY,
+                false,
+                Locales.PHRASESSILENT_DESCRIPTION
+            );
+
+            EnableSubtitles = Register(
+                EConfigType.BASIC,
+                Locales.ENABLESUBTITLES_KEY,
+                true
+            );
+
             FormationPresets = Register(
                 EConfigType.BASIC,
                 "FormationPresets",
@@ -527,10 +548,22 @@ namespace MiyakoCarryService.Client
             #endregion
             #region PLAYER
 
-            EnableSubtitles = Register(
+            TeammateHighlight = Register(
                 EConfigType.PLAYER,
-                Locales.ENABLESUBTITLES_KEY,
-                true
+                Locales.TEAMMATEHIGHLIGHT_KEY,
+                false
+            );
+
+            TeammateHighlightHotKey = Register(
+                EConfigType.PLAYER,
+                Locales.TEAMMATEHIGHLIGHTHOTKEY_KEY,
+                new KeyboardShortcut()
+            );
+
+            TeammateHighlightColor = Register(
+                EConfigType.PLAYER,
+                Locales.TEAMMATEHIGHLIGHTCOLOR_KEY,
+                Draw.TranslucentTianyi.Rgb
             );
 
             ShowBrevityCode = Register(
@@ -599,7 +632,7 @@ namespace MiyakoCarryService.Client
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError($"Batch refresh mcsBotPlayerConfig error: {e}");
+                    McsLogger.LogError($"Batch refresh mcsBotPlayerConfig error: {e}");
                 }
             }
         }

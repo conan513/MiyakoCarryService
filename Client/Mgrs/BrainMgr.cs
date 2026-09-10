@@ -35,13 +35,14 @@ namespace MiyakoCarryService.Client.Mgrs
 
         private void InitCustomLayerMaps()
         {
-            LayerUtils.RegisterCustomLayer(typeof(McsCommonLayer), 65);
-            LayerUtils.RegisterCustomLayer(typeof(McsAvoidDangerLayer), 66);
-            LayerUtils.RegisterCustomLayer(typeof(McsClearAreaLayer), 67);
-            LayerUtils.RegisterCustomLayer(typeof(McsExfiltrationLayer), 68);
-            LayerUtils.RegisterCustomLayer(typeof(McsFightLayer), 185);
-            LayerUtils.RegisterCustomLayer(typeof(McsEscortLayer), 186);
-            LayerUtils.RegisterCustomLayer(typeof(McsProxyLayer), 187);
+            // LayerUtils.RegisterCustomLayer(typeof(McsCommonLayer), 65);
+            // LayerUtils.RegisterCustomLayer(typeof(McsAvoidDangerLayer), 66);
+            // LayerUtils.RegisterCustomLayer(typeof(McsClearAreaLayer), 67);
+            // LayerUtils.RegisterCustomLayer(typeof(McsExfiltrationLayer), 68);
+            // LayerUtils.RegisterCustomLayer(typeof(McsFightLayer), 185);
+            // LayerUtils.RegisterCustomLayer(typeof(McsEscortLayer), 186);
+            // LayerUtils.RegisterCustomLayer(typeof(McsProxyLayer), 187);
+            LayerUtils.RegisterCustomLayer(typeof(McsBrainLayer), 200);
         }
 
         public override void OnRaidEnded()
@@ -91,6 +92,8 @@ namespace MiyakoCarryService.Client.Mgrs
                         FormationMatrix = MiyakoCarryServicePlugin.FormationMatrix.Value,
                         FormationSpacing = MiyakoCarryServicePlugin.FormationSpacing.Value,
                         FormationSequentialFill = MiyakoCarryServicePlugin.FormationSequentialFill.Value,
+                        PhrasesSilent = MiyakoCarryServicePlugin.PhrasesSilent.Value,
+                        EnableSubtitles = MiyakoCarryServicePlugin.EnableSubtitles.Value,
                     };
                     McsMgr.UpdateMcsBotPlayerConfig(mcsBotPlayerConfig.McsLeadPlayerId, mcsBotPlayerConfig);
                 }

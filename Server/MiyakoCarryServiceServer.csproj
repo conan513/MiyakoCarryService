@@ -12,35 +12,40 @@
     <AssemblyProduct>MiyakoCarryService</AssemblyProduct>  
     <AssemblyCopyright>Copyright © 姫様の夢 2025 - 2026</AssemblyCopyright> 
     <AssemblyTitle>MiyakoCarryServiceServer</AssemblyTitle>  
-    <Version>1.1.1.0</Version>
+    <Version>1.1.3.1</Version>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
-    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <DisableBuildCompression>true</DisableBuildCompression>
     <Trademark>https://sp-mod.com/mod/2709/miyako-carry-service</Trademark>
     <RootNamespace>MiyakoCarryService.Server</RootNamespace>
     <NoWarn>CS0618;CS8632;CS9107</NoWarn>
     <AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>
   </PropertyGroup>
   <ItemGroup>
-      <Content Include="Assets\**">
+    <Content Include="Assets\**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
+    </Content>
+    <!-- <Content Include="wwwroot\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content> -->
+    <!-- <Content Include="Web\**\*.razor" /> -->
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SPTarkov.Common" Version="4.1.0" />
-    <PackageReference Include="SPTarkov.DI" Version="4.1.0" />
-    <PackageReference Include="SPTarkov.Reflection" Version="4.1.0" />
-    <PackageReference Include="SPTarkov.Server.Core" Version="4.1.0" />
-    <PackageReference Include="SPTarkov.Server.Web" Version="4.1.0" />
+    <PackageReference Include="SPTushonka.Common" Version="4.1.2" />
+    <PackageReference Include="SPTushonka.DI" Version="4.1.2" />
+    <PackageReference Include="SPTushonka.Reflection" Version="4.1.2" />
+    <PackageReference Include="SPTushonka.Server.Core" Version="4.1.2" />
+    <PackageReference Include="SPTushonka.Server.Web" Version="4.1.2" />
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <ItemGroup>
-      <ServerAssets Include="$(TargetDir)Assets\**\*.*" />
-    </ItemGroup>
-    <MakeDir Directories="$(DevGamePluginsMiyakoCarryServicePath)" Condition="'$([MSBuild]::IsOSPlatform(Windows))' and Exists('$(DevServerPath)')" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevGamePluginsMiyakoCarryServicePath)" Condition="'$([MSBuild]::IsOSPlatform(Windows))' and Exists('$(DevServerPath)')" />
-    <MakeDir Directories="$(BuildMiyakoCarryServicePath)" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BuildMiyakoCarryServicePath)" />
-    <Copy SourceFiles="@(ServerAssets)" DestinationFiles="@(ServerAssets->'$(BuildMiyakoCarryServicePath)\Assets\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="@(ServerAssets)" DestinationFiles="@(ServerAssets->'$(DevGamePluginsMiyakoCarryServicePath)\Assets\%(RecursiveDir)%(Filename)%(Extension)')" Condition="'$([MSBuild]::IsOSPlatform(Windows))' and Exists('$(DevServerPath)')" />
-  </Target>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">  
+    <Exec Command="mkdir &quot;$(DevGamePluginsMiyakoCarryServicePath)&quot;" Condition="!Exists('$(DevGamePluginsMiyakoCarryServicePath)')" />
+    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\$(TargetFileName)&quot;" />  
+    <Exec Command="mkdir &quot;$(BuildMiyakoCarryServicePath)&quot;" Condition="!Exists('$(BuildMiyakoCarryServicePath)')" />
+    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(BuildMiyakoCarryServicePath)\$(TargetFileName)&quot;" />
+    <Exec Command="if exist &quot;$(BuildMiyakoCarryServicePath)\Assets&quot; rd /s /q &quot;$(BuildMiyakoCarryServicePath)\Assets&quot;" />
+    <!-- <Exec Command="if exist &quot;$(BuildMiyakoCarryServicePath)\wwwroot&quot; rd /s /q &quot;$(BuildMiyakoCarryServicePath)\wwwroot&quot;" /> -->
+    <Exec Command="xcopy &quot;$(TargetDir)Assets\*.*&quot; &quot;$(BuildMiyakoCarryServicePath)\Assets\&quot; /E /I /Y" />
+    <Exec Command="xcopy &quot;$(TargetDir)Assets\*.*&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\Assets\&quot; /E /I /Y" />
+    <!-- <Exec Command="xcopy &quot;$(TargetDir)wwwroot\*.*&quot; &quot;$(BuildMiyakoCarryServicePath)\wwwroot\&quot; /E /I /Y" />
+    <Exec Command="xcopy &quot;$(TargetDir)wwwroot\*.*&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\wwwroot\&quot; /E /I /Y" /> -->
+  </Target> 
 </Project>

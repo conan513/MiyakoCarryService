@@ -181,11 +181,19 @@ namespace MiyakoCarryService.Client.Mgrs
                 var myPlayer = Singleton<GameWorld>.Instance.MainPlayer;
                 if (myPlayer != null && McsMgr.IsMyMcsBotPlayer(myPlayer.ProfileId, mcsBotPlayer.ProfileId))
                 {
-                    mcsBotPlayer.AIData.BotOwner.BotTalk.TrySay(msg.PhraseTrigger);
+                    if (!ShouldSilencePhrases(mcsLeadPlayer))
+                    {
+                        mcsBotPlayer.AIData.BotOwner.BotTalk.TrySay(msg.PhraseTrigger);
+                    }
                     ShowMsg(mcsLeadPlayer, mcsBotPlayer, msg);
                 }
                 else
                 {
+                    if (!ShouldShowSubtitles(mcsLeadPlayer.ProfileId))
+                    {
+                        return;
+                    }
+
                     EventMgr.Notify(new SubtitlesMgrHandleFikaEvent
                     {
                         McsLeadPlayerId = mcsLeadPlayer.ProfileId,
@@ -196,9 +204,61 @@ namespace MiyakoCarryService.Client.Mgrs
             }
             else
             {
-                mcsBotPlayer.AIData.BotOwner.BotTalk.TrySay(msg.PhraseTrigger);
+                if (!ShouldSilencePhrases(mcsLeadPlayer))
+                {
+                    mcsBotPlayer.AIData.BotOwner.BotTalk.TrySay(msg.PhraseTrigger);
+                }
                 ShowMsg(mcsLeadPlayer, mcsBotPlayer, msg);
             }
+        }
+
+        private bool ShouldSilencePhrases(Player mcsLeadPlayer)
+        {
+            return ShouldSilencePhrases(mcsLeadPlayer.ProfileId);
+        }
+
+        public bool ShouldSilencePhrases(MongoID mcsLeadPlayerId)
+        {
+            if (McsMgr != null && McsMgr.McsLeadPlayerConfigs.TryGetValue(mcsLeadPlayerId, out var mcsBotPlayerConfig))
+            {
+                return mcsBotPlayerConfig.PhrasesSilent;
+            }
+            return MiyakoCarryServicePlugin.PhrasesSilent.Value;
+        }
+
+        public bool ShouldShowSubtitles(MongoID mcsLeadPlayerId)
+        {
+            if (McsMgr != null && McsMgr.McsLeadPlayerConfigs.TryGetValue(mcsLeadPlayerId, out var mcsBotPlayerConfig))
+            {
+                return mcsBotPlayerConfig.EnableSubtitles;
+            }
+            return true;
+        }
+
+        public bool ShouldSilenceBot(Player mcsBotPlayer)
+        {
+            if (!Tools.IsHost)
+            {
+                return false;
+            }
+
+            if (mcsBotPlayer == null)
+            {
+                return false;
+            }
+
+            if (McsMgr == null || !McsMgr.IsMcsBotPlayer(mcsBotPlayer.ProfileId))
+            {
+                return false;
+            }
+
+            var mcsLeadPlayer = McsMgr.GetMcsLeadPlayerByMcsBotPlayerId(mcsBotPlayer.ProfileId);
+            if (mcsLeadPlayer == null)
+            {
+                return false;
+            }
+
+            return ShouldSilencePhrases(mcsLeadPlayer.ProfileId);
         }
 
         public string HandleOnFirstContact(string content, McsMsg msg, Player mcsLeadPlayer, Player mcsBotPlayer)

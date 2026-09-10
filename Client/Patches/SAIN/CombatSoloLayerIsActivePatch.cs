@@ -39,6 +39,11 @@ namespace MiyakoCarryService.Client.Patches.SAIN
                     return true;
                 }
 
+                if (SAINUtils.GetSAINBot(botOwner) == null)
+                {
+                    return true;
+                }
+
                 var state = _states.GetOrCreateValue(botOwner);
                 if (mcsBotPlayerData.HasIntent(Intents.ShouldUseStationaryWeapon))
                 {
@@ -73,6 +78,13 @@ namespace MiyakoCarryService.Client.Patches.SAIN
 
                 if (!state.SainAllowed)
                 {
+                    var sainBot = SAINUtils.GetSAINBot(botOwner);
+                    var botActivation = SAINUtils.GetBotActivation(sainBot);
+                    if (botActivation != null)
+                    {
+                        SAINUtils.SetActiveLayerNone(botActivation);
+                    }
+
                     __result = false;
                     return false;
                 }

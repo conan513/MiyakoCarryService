@@ -528,13 +528,34 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
 
             var hasEscortToBtr = McsBotPlayerData.HasIntent(Intents.ShouldEscortToBtr);
             var hasEscort = McsBotPlayerData.HasIntent(Intents.ShouldEscort);
+
+            if (!hasEscort && !hasEscortToBtr)
+            {
+                return true;
+            }
+
             var btrController = Singleton<GameWorld>.Instance.BtrController;
             if ((hasEscort && !McsBotPlayerData.TargetPos.HasValue) || (hasEscortToBtr && !btrController.Initiated()))
             {
                 return true;
             }
 
-            var sqrDistance = hasEscort ? McsBotPlayerData.TargetPos.Value.McsSqrDistance(BotOwner.Position) : btrController.BtrView.GetBtrSide(1).GoInPoints().Item1.McsSqrDistance(BotOwner.Position);
+            Vector3? targetPos;
+            if (hasEscort)
+            {
+                targetPos = McsBotPlayerData.TargetPos;
+            }
+            else
+            {
+                var side = btrController.BtrView.GetBtrSide(1);
+                if (side == null)
+                {
+                    return true;
+                }
+                targetPos = side.GoInPoints().Item1;
+            }
+
+            var sqrDistance = targetPos.Value.McsSqrDistance(BotOwner.Position);
             if (sqrDistance < 2f * 2f)
             {
                 McsBotPlayerData.SetIntent([Intents.ShouldFollowMe, Intents.ShouldKeepFormation], Intents.ShouldHoldPosition);
@@ -1233,7 +1254,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
 
             var targetSlot = CheckWeaponSwitch();
 #if DEBUG
-            // MiyakoCarryServicePlugin.Logger.LogWarning($"目标武器类型: {targetSlot}");
+            // McsLogger.LogWarning($"目标武器类型: {targetSlot}");
 #endif
             _nextMeleeCheckTime = Time.time + MELEE_CHECK_INTERVAL;
 
@@ -1742,7 +1763,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                 return true;
             }
 
-            if (!McsBotPlayerData.HasIntent([Intents.ShouldInteractionProxyAction, Intents.ShouldLootProxyAction, Intents.ShouldQuestProxyAction]))
+            if (!McsBotPlayerData.HasAnyIntent(Intents.ShouldInteractionProxyAction, Intents.ShouldLootProxyAction, Intents.ShouldQuestProxyAction))
             {
                 return true;
             }

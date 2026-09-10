@@ -193,7 +193,58 @@ namespace MiyakoCarryService.Client.Mgrs
                 mcsBotPlayer.Profile.Info.GroupId = "Fika";
                 mcsBotPlayer.Profile.Info.TeamId = "Fika";
             }
+
+            if (mcsBotPlayer != null)
+            {
+                IngoreMcsBotPlayerCollision(mcsBotPlayer);
+            }
+
             return mcsBotPlayer;
+        }
+
+        public void IngoreMcsBotPlayerCollision(Player mcsBotPlayer)
+        {
+            if (mcsBotPlayer == null)
+            {
+                return;
+            }
+
+            var gameWorld = Singleton<GameWorld>.Instance;
+            if (gameWorld == null)
+            {
+                return;
+            }
+
+            var mainPlayer = gameWorld.MainPlayer;
+            if (mainPlayer == null || mainPlayer == mcsBotPlayer)
+            {
+                return;
+            }
+
+            var mcsBotPlayerCollider = mcsBotPlayer.CharacterController?.GetCollider();
+            if (mcsBotPlayerCollider == null)
+            {
+                return;
+            }
+
+            var mainPlayerCollider = mainPlayer.CharacterController?.GetCollider();
+            if (mainPlayerCollider != null && !PhysicsExtensions.GetIgnoreCollision(mainPlayerCollider, mcsBotPlayerCollider))
+            {
+                PhysicsExtensions.IgnoreCollision(mainPlayerCollider, mcsBotPlayerCollider, true);
+            }
+
+            var pom = mainPlayer.POM;
+            if (pom == null)
+            {
+                return;
+            }
+
+            if (pom.Collider != null && !PhysicsExtensions.GetIgnoreCollision(pom.Collider, mcsBotPlayerCollider))
+            {
+                PhysicsExtensions.IgnoreCollision(pom.Collider, mcsBotPlayerCollider, true);
+            }
+
+            pom.IgnoreCollider(mcsBotPlayerCollider, true);
         }
 
         private Player ResolveMcsBotPlayer(ConcurrentDictionary<MongoID, Player> squadMembers, MongoID mcsBotPlayerId)
@@ -405,7 +456,7 @@ namespace MiyakoCarryService.Client.Mgrs
                         var mcsBotPlayerData = botOwner.GetMcsBotPlayerData();
                         if (mcsBotPlayerData != null)
                         {
-                            if (!mcsBotPlayerConfig.EnableLooting)
+                            if (!mcsBotPlayerConfig.EnableLooting && !mcsBotPlayerData.HasEmergencyLootNeed())
                             {
                                 mcsBotPlayerData.IsLooting = false;
                             }
@@ -456,6 +507,8 @@ namespace MiyakoCarryService.Client.Mgrs
                     oldConfig.EnableKeepFormation = mcsBotPlayerConfig.EnableKeepFormation;
                     oldConfig.FormationSpacing = mcsBotPlayerConfig.FormationSpacing;
                     oldConfig.FormationSequentialFill = mcsBotPlayerConfig.FormationSequentialFill;
+                    oldConfig.PhrasesSilent = mcsBotPlayerConfig.PhrasesSilent;
+                    oldConfig.EnableSubtitles = mcsBotPlayerConfig.EnableSubtitles;
                     oldConfig.Extensions = mcsBotPlayerConfig.Extensions;
                     return oldConfig;
                 }
@@ -507,7 +560,7 @@ namespace MiyakoCarryService.Client.Mgrs
             {
                 foreach (var mcsBotPlayerId in _allMcsBotPlayerIdInRaid)
                 {
-                    var mcsBotPlayer = TryGetMcsBotPlayer(mcsBotPlayerId);
+                    var mcsBotPlayer = FetchMcsBotPlayer(mcsBotPlayerId);
                     if (mcsBotPlayer == null)
                     {
                         continue;
@@ -667,6 +720,9 @@ namespace MiyakoCarryService.Client.Mgrs
             return squadMembers.Keys.ToList();
         }
 
+        /// <summary>
+        /// 副机不应该进行调用
+        /// </summary>
         public Player TryGetMcsBotPlayer(MongoID mcsBotPlayerId, MongoID? mcsLeadPlayerId = null)
         {
             if (mcsLeadPlayerId.HasValue)

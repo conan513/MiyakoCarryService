@@ -366,7 +366,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                     }
                     else
                     {
-                        if (McsBotPlayerData != null && ((mcsLeadPlayerPos.McsSqrDistance(goalEnemy.Person.Position) <= 50f * 50f && !McsBotPlayerData.HasIntent(Intents.ShouldFollowMe)) || mcsLeadPlayerPos.McsSqrDistance(goalEnemy.Person.Position) <= 20f * 20f) && !McsBotPlayerData.HasIntent(Intents.ShouldKeepFormation) && !McsBotPlayerData.HasIntent(Intents.ShouldUseStationaryWeapon))
+                        if (McsBotPlayerData != null && ((mcsLeadPlayerPos.McsSqrDistance(goalEnemy.Person.Position) <= 50f * 50f && !McsBotPlayerData.HasIntent(Intents.ShouldFollowMe)) || mcsLeadPlayerPos.McsSqrDistance(goalEnemy.Person.Position) <= 20f * 20f) && !McsBotPlayerData.HasAnyIntent(Intents.ShouldKeepFormation, Intents.ShouldUseStationaryWeapon, Intents.ShouldHoldPosition))
                         {
                             return new Action(typeof(RunToEnemyLogic), "Mcs:RushEnemy");
                         }
@@ -461,7 +461,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
             }
             catch (Exception e)
             {
-                MiyakoCarryServicePlugin.Logger.LogError(e);
+                McsLogger.LogError(e);
                 return new Action(typeof(HoldPositionLogic), "Mcs:Exception");
             }
         }
