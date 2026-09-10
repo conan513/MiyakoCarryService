@@ -30,6 +30,7 @@ namespace MiyakoCarryService.Fika
     {
         private SubtitlesMgr SubtitlesMgr => McsMgrApi.GetMgr<SubtitlesMgr>();
         private QuestDataMgr QuestDataMgr => McsMgrApi.GetMgr<QuestDataMgr>();
+        private McsMgr McsMgr => McsMgrApi.GetMgr<McsMgr>();
         private List<ModulePatch> _patches = new();
         public const string McsFikaGUID = "top.himesamanoyume.miyakocarryservice.fika";
 #if DEBUG

@@ -24,28 +24,25 @@
     <Content Include="Assets\**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <!-- <Content Include="wwwroot\**">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content> -->
-    <!-- <Content Include="Web\**\*.razor" /> -->
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SPTushonka.Common" Version="4.1.2" />
-    <PackageReference Include="SPTushonka.DI" Version="4.1.2" />
-    <PackageReference Include="SPTushonka.Reflection" Version="4.1.2" />
-    <PackageReference Include="SPTushonka.Server.Core" Version="4.1.2" />
-    <PackageReference Include="SPTushonka.Server.Web" Version="4.1.2" />
+    <PackageReference Include="SPTushonka.Common" Version="4.1.5" />
+    <PackageReference Include="SPTushonka.DI" Version="4.1.5" />
+    <PackageReference Include="SPTushonka.Reflection" Version="4.1.5" />
+    <PackageReference Include="SPTushonka.Server.Core" Version="4.1.5" />
+    <PackageReference Include="SPTushonka.Server.Web" Version="4.1.5" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">  
-    <Exec Command="mkdir &quot;$(DevGamePluginsMiyakoCarryServicePath)&quot;" Condition="!Exists('$(DevGamePluginsMiyakoCarryServicePath)')" />
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\$(TargetFileName)&quot;" />  
-    <Exec Command="mkdir &quot;$(BuildMiyakoCarryServicePath)&quot;" Condition="!Exists('$(BuildMiyakoCarryServicePath)')" />
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(BuildMiyakoCarryServicePath)\$(TargetFileName)&quot;" />
-    <Exec Command="if exist &quot;$(BuildMiyakoCarryServicePath)\Assets&quot; rd /s /q &quot;$(BuildMiyakoCarryServicePath)\Assets&quot;" />
-    <!-- <Exec Command="if exist &quot;$(BuildMiyakoCarryServicePath)\wwwroot&quot; rd /s /q &quot;$(BuildMiyakoCarryServicePath)\wwwroot&quot;" /> -->
-    <Exec Command="xcopy &quot;$(TargetDir)Assets\*.*&quot; &quot;$(BuildMiyakoCarryServicePath)\Assets\&quot; /E /I /Y" />
-    <Exec Command="xcopy &quot;$(TargetDir)Assets\*.*&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\Assets\&quot; /E /I /Y" />
-    <!-- <Exec Command="xcopy &quot;$(TargetDir)wwwroot\*.*&quot; &quot;$(BuildMiyakoCarryServicePath)\wwwroot\&quot; /E /I /Y" />
-    <Exec Command="xcopy &quot;$(TargetDir)wwwroot\*.*&quot; &quot;$(DevGamePluginsMiyakoCarryServicePath)\wwwroot\&quot; /E /I /Y" /> -->
+    <MakeDir Directories="$(BuildMiyakoCarryServicePath)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BuildMiyakoCarryServicePath)" />
+    <ItemGroup>
+      <ServerAssets Include="$(ProjectDir)Assets\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ServerAssets)" DestinationFiles="@(ServerAssets->'$(BuildMiyakoCarryServicePath)\Assets\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <!-- Dev target (if exists) -->
+    <MakeDir Directories="$(DevGamePluginsMiyakoCarryServicePath)" Condition="Exists('$(DevServerPath)')" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevGamePluginsMiyakoCarryServicePath)" Condition="Exists('$(DevServerPath)')" />
+    <Copy SourceFiles="@(ServerAssets)" DestinationFiles="@(ServerAssets->'$(DevGamePluginsMiyakoCarryServicePath)\Assets\%(RecursiveDir)%(Filename)%(Extension)')" Condition="Exists('$(DevServerPath)')" />
   </Target> 
 </Project>

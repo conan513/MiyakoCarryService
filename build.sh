@@ -38,32 +38,38 @@ echo ""
 # 3. Packaging
 echo -e "${BLUE}[3/3] Csomagolás (Zips létrehozása: Plugin, Fika, Assistant)...${NC}"
 
-# Ensure zip is available
-if ! command -v zip &> /dev/null; then
-    echo -e "${RED}[ERROR] A 'zip' parancs nincs telepítve! Kérlek telepítsd (pl. sudo apt install zip).${NC}"
-    exit 1
-fi
+create_zip() {
+    local src_dir="$1"
+    local dest_zip="$2"
+    if command -v zip &> /dev/null; then
+        (cd "$src_dir" && zip -r -q "$dest_zip" .)
+    elif command -v 7z &> /dev/null; then
+        (cd "$src_dir" && 7z a -tzip -bso0 -bsp0 "$dest_zip" .)
+    else
+        python3 -c "import shutil, sys; shutil.make_archive(sys.argv[2].removesuffix('.zip'), 'zip', sys.argv[1])" "$src_dir" "$dest_zip"
+    fi
+}
 
 # Remove previous archives
 rm -f "MiyakoCarryService-${VER}.zip" "MiyakoCarryServiceFika-${VER}.zip" "MiyakoCarryServiceAssistant-${VER}.zip"
 
 # Create archives
 if [ -d "Build/Plugin" ]; then
-    (cd "Build/Plugin" && zip -r -q "${SCRIPT_DIR}/MiyakoCarryService-${VER}.zip" .)
+    create_zip "Build/Plugin" "${SCRIPT_DIR}/MiyakoCarryService-${VER}.zip"
     echo "  -> MiyakoCarryService-${VER}.zip elkészült"
 else
     echo -e "${RED}[WARNING] Build/Plugin mappa nem található!${NC}"
 fi
 
 if [ -d "Build/Fika" ]; then
-    (cd "Build/Fika" && zip -r -q "${SCRIPT_DIR}/MiyakoCarryServiceFika-${VER}.zip" .)
+    create_zip "Build/Fika" "${SCRIPT_DIR}/MiyakoCarryServiceFika-${VER}.zip"
     echo "  -> MiyakoCarryServiceFika-${VER}.zip elkészült"
 else
     echo -e "${RED}[WARNING] Build/Fika mappa nem található!${NC}"
 fi
 
 if [ -d "Build/Assistant" ]; then
-    (cd "Build/Assistant" && zip -r -q "${SCRIPT_DIR}/MiyakoCarryServiceAssistant-${VER}.zip" .)
+    create_zip "Build/Assistant" "${SCRIPT_DIR}/MiyakoCarryServiceAssistant-${VER}.zip"
     echo "  -> MiyakoCarryServiceAssistant-${VER}.zip elkészült"
 else
     echo -e "${RED}[WARNING] Build/Assistant mappa nem található!${NC}"
