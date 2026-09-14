@@ -47,15 +47,8 @@ namespace MiyakoCarryService.Client.Bots.Brain.Logics
             }
             else
             {
-                if (leaderToTargetSqrDistance < botToTargetSqrDistance || botToLeaderSqrDistance <= 11f * 11f || botToLeaderSqrDistance >= 18f * 18f)
-                {
-                    BotOwner.Sprint(true, false);
-                }
-                else
-                {
-                    BotOwner.Sprint(false, false);
-                }
-                _baseLogic.UpdateNodeByMain(data);
+                bool sprint = leaderToTargetSqrDistance < botToTargetSqrDistance || botToLeaderSqrDistance <= 11f * 11f || botToLeaderSqrDistance >= 18f * 18f;
+                BotOwner.GoToSomePointData.UpdateToGo(sprint, 1f, 1f);
             }
         }
     }

@@ -105,6 +105,14 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
             {
                 McsBotPlayerData.IsMcsLayerActive = true;
             }
+            if (BotOwner.Mover != null && BotOwner.Mover.Pause)
+            {
+                BotOwner.Mover.Pause = false;
+            }
+            // Reset move state so a fresh target is calculated immediately after (re)activation
+            _currentMoveTarget = null;
+            _lastTargetPos = null;
+            _nextUpdatePosTime = 0f;
         }
 
         public override void Stop()
@@ -485,7 +493,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                     BotOwner.Mover._prevPosLinkedTime = 0f;
                     BotOwner.Mover.SetPlayerToNavMesh(playerPosition);
                     BotOwner.Mover.RecalcWay();
-                    BotOwner.Mover.Pause = true;
+                    BotOwner.Mover.Pause = false;
                     UpdateLeadNearMoveTarget(mcsLeadPlayerPos, out float nextTime);
                     if (_currentMoveTarget.HasValue)
                     {
@@ -589,7 +597,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                     BotOwner.Mover._prevPosLinkedTime = 0f;
                     BotOwner.Mover.SetPlayerToNavMesh(playerPosition);
                     BotOwner.Mover.RecalcWay();
-                    BotOwner.Mover.Pause = true;
+                    BotOwner.Mover.Pause = false;
                     UpdateLeadNearMoveTarget(mcsLeadPlayerPos, out float nextTime);
                     if (_currentMoveTarget.HasValue)
                     {
@@ -637,7 +645,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                     BotOwner.Mover._prevPosLinkedTime = 0f;
                     BotOwner.Mover.SetPlayerToNavMesh(playerPosition);
                     BotOwner.Mover.RecalcWay();
-                    BotOwner.Mover.Pause = true;
+                    BotOwner.Mover.Pause = false;
                     BotOwner.TalkMsg(new McsMsg
                     {
                         PhraseTrigger = EPhraseTrigger.Regroup
@@ -1130,7 +1138,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                 BotOwner.Mover._prevPosLinkedTime = 0f;
                 BotOwner.Mover.SetPlayerToNavMesh(playerPosition);
                 BotOwner.Mover.RecalcWay();
-                BotOwner.Mover.Pause = true;
+                BotOwner.Mover.Pause = false;
                 UpdateCommonMoveTarget(BotOwner.PatrollingData.ExfiltrationData.CachedExfiltrationPoint.Position, out float nextTime);
                 if (_currentMoveTarget.HasValue)
                 {
@@ -1384,7 +1392,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                 return;
             }
 
-            if (_lastTargetPos.HasValue && _lastTargetPos.Value.McsSqrDistance(leadPos.Value) < LEAD_POSITION_CHANGE_THRESHOLD * LEAD_POSITION_CHANGE_THRESHOLD)
+            if (_currentMoveTarget.HasValue && _lastTargetPos.HasValue && _lastTargetPos.Value.McsSqrDistance(leadPos.Value) < LEAD_POSITION_CHANGE_THRESHOLD * LEAD_POSITION_CHANGE_THRESHOLD)
             {
                 nextUpdateTime = 1f;
                 return;
@@ -1393,6 +1401,22 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
             var nearPos = Tools.GetPosNearTarget(leadPos.Value, BotOwner);
             if (!nearPos.HasValue)
             {
+                // Fallback: ha a NavMesh sampling nem sikerül (pl. spawn utáni első frame-ben),
+                // használjuk közvetlenül a leadPos-t célként, hogy a bot ne ragadjon HoldPosition-ban.
+                if (!_currentMoveTarget.HasValue)
+                {
+                    var fallbackGroundPos = TryProjectToGround(leadPos.Value);
+                    if (CanGetPathToRun(BotOwner.Position, fallbackGroundPos, McsBotPlayerData, out Vector3[] fallbackCorners))
+                    {
+                        _currentMoveTarget = GetPointAlongPathAtDistance(fallbackCorners, 15f);
+                        _lastTargetPos = leadPos;
+                    }
+                    else
+                    {
+                        _currentMoveTarget = leadPos;
+                        _lastTargetPos = leadPos;
+                    }
+                }
                 nextUpdateTime = 0.25f;
                 return;
             }

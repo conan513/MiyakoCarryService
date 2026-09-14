@@ -1,4 +1,4 @@
-
+using System;
 using DrakiaXYZ.BigBrain.Brains;
 using EFT;
 using MiyakoCarryService.Client.Extensions;
@@ -16,19 +16,22 @@ namespace MiyakoCarryService.Client.Bots.Brain.Logics
 
         public override void Update(CustomLayer.ActionData data)
         {
+            if (BotOwner.Mover != null && BotOwner.Mover.Pause)
+            {
+                BotOwner.Mover.Pause = false;
+            }
+
             var mcsBotPlayerData = BotOwner.GetMcsBotPlayerData();
             if (mcsBotPlayerData == null)
             {
-                BotOwner.Sprint(true, false);
-                _baseLogic.UpdateNodeByMain(data);
+                BotOwner.GoToSomePointData.UpdateToGo(true, 1f, 1f);
                 return;
             }
 
             var leadPlayer = mcsBotPlayerData.LeadPlayer;
             if (leadPlayer == null)
             {
-                BotOwner.Sprint(true, false);
-                _baseLogic.UpdateNodeByMain(data);
+                BotOwner.GoToSomePointData.UpdateToGo(true, 1f, 1f);
                 return;
             }
 
@@ -44,35 +47,25 @@ namespace MiyakoCarryService.Client.Bots.Brain.Logics
                 if (leaderMovementContext.IsInPronePose)
                 {
                     BotOwner.BotLight?.TurnOff(false, true);
-                    BotOwner.SetPose(0f);
-                    BotOwner.SetTargetMoveSpeed(isCloseToLead ? 0f : 0.5f);
+                    BotOwner.GoToSomePointData.UpdateToGo(false, isCloseToLead ? 0f : 0.5f, 0f);
                 }
                 else if (leaderMovementContext.PoseLevel < 1f)
                 {
                     BotOwner.BotLight?.TurnOff(false, true);
-                    BotOwner.SetPose(leaderMovementContext.PoseLevel);
-                    BotOwner.SetTargetMoveSpeed(isCloseToLead ? leaderMovementContext.CharacterMovementSpeed : 1f);
+                    var speed = isCloseToLead ? Math.Max(0.4f, leaderMovementContext.CharacterMovementSpeed) : 1f;
+                    BotOwner.GoToSomePointData.UpdateToGo(false, speed, leaderMovementContext.PoseLevel);
                 }
                 else
                 {
-                    BotOwner.SetPose(1f);
-                    if (botToLeaderSqrDistance > 15f * 15f)
-                    {
-                        BotOwner.Sprint(true, false);
-                    }
-                    else
-                    {
-                        BotOwner.Sprint(false, false);
-                        BotOwner.SetTargetMoveSpeed(isCloseToLead ? leaderMovementContext.CharacterMovementSpeed : 1f);
-                    }
+                    var sprint = botToLeaderSqrDistance > 15f * 15f;
+                    var speed = isCloseToLead ? (leaderMovementContext.CharacterMovementSpeed > 0.1f ? leaderMovementContext.CharacterMovementSpeed : 0.8f) : 1f;
+                    BotOwner.GoToSomePointData.UpdateToGo(sprint, speed, 1f);
                 }
             }
             else
             {
-                BotOwner.Sprint(true, false);
+                BotOwner.GoToSomePointData.UpdateToGo(true, 1f, 1f);
             }
-
-            _baseLogic.UpdateNodeByMain(data);
         }
     }
 }

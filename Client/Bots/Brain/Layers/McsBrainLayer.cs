@@ -448,7 +448,8 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
                                     return new Action(typeof(HealLogic), "Mcs:FightHealing5");
                                 }
 
-                                if (sqrDistance >= TOO_FAR_FROM_LEAD_DISTANCE * 1 || tooClose)
+                                var distToTargetSqrFight = _currentMoveTarget.HasValue ? BotOwner.Position.McsSqrDistance(_currentMoveTarget.Value) : float.MaxValue;
+                                if (distToTargetSqrFight > 2f * 2f || sqrDistance >= TOO_FAR_FROM_LEAD_DISTANCE * 1 || tooClose)
                                 {
                                     if (_currentMoveTarget.HasValue)
                                     {
@@ -641,7 +642,8 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
 
                 TryRefreshLeadTarget(mcsLeadPlayerPos, time);
 
-                if (sqrDistance >= TOO_FAR_FROM_LEAD_DISTANCE * 1 || tooClose)
+                var distToTargetSqr = _currentMoveTarget.HasValue ? BotOwner.Position.McsSqrDistance(_currentMoveTarget.Value) : float.MaxValue;
+                if (distToTargetSqr > 2f * 2f || sqrDistance >= TOO_FAR_FROM_LEAD_DISTANCE * 1 || tooClose)
                 {
                     if (_currentMoveTarget.HasValue)
                     {
@@ -707,6 +709,10 @@ namespace MiyakoCarryService.Client.Bots.Brain.Layers
         {
             if (_currentMoveTarget.HasValue)
             {
+                if (BotOwner.Mover != null && BotOwner.Mover.Pause)
+                {
+                    BotOwner.Mover.Pause = false;
+                }
                 BotOwner.GoToSomePointData.SetPoint(_currentMoveTarget.Value);
             }
         }

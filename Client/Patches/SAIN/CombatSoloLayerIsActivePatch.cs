@@ -55,7 +55,16 @@ namespace MiyakoCarryService.Client.Patches.SAIN
                 var goalEnemy = botOwner?.Memory?.GoalEnemy;
                 if (goalEnemy == null)
                 {
-                    return true;
+                    state.SainAllowed = false;
+                    var sainBot = SAINUtils.GetSAINBot(botOwner);
+                    var botActivation = SAINUtils.GetBotActivation(sainBot);
+                    if (botActivation != null)
+                    {
+                        SAINUtils.SetActiveLayerNone(botActivation);
+                    }
+
+                    __result = false;
+                    return false;
                 }
                 
                 var mcsLeadPlayerPos = botOwner.GetMcsLeadPlayerPos(mcsBotPlayerData);

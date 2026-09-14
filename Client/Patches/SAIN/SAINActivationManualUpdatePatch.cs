@@ -12,6 +12,17 @@ namespace MiyakoCarryService.Client.Patches.SAIN
     {
         protected override MethodBase GetTargetMethod() => AccessTools.Method(SAINUtils.SAINActivationClassType, "ManualUpdate");
 
+        [PatchPrefix]
+        public static void Prefix(object __instance)
+        {
+            if (!SAINUtils.IsMcsActivation(__instance))
+            {
+                return;
+            }
+
+            SAINUtils.SetActiveLayerNone(__instance);
+        }
+
         [PatchPostfix]
         public static void Postfix(object __instance)
         {

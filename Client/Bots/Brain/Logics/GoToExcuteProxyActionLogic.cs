@@ -58,8 +58,7 @@ namespace MiyakoCarryService.Client.Bots.Brain.Logics
             }
             else
             {
-                BotOwner.Sprint(true, false);
-                _baseLogic.UpdateNodeByMain(data);
+                BotOwner.GoToSomePointData.UpdateToGo(true, 1f, 1f);
             }
 
             if (mcsBotPlayerData.IsTaskRunning)
